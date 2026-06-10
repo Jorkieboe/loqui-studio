@@ -1,0 +1,31 @@
+# Character Prompts Configuration
+base_prompt: |
+  Line 1 of updated prompt.
+  Line 2 of updated prompt.
+do:
+  - Speak with clarity.
+  - Follow new instructions.
+don't:
+  - Break character.
+context:
+  setting: "An empty room."
+  personality: "Helpful and concise."
+  background: "Created as an illustrative blueprint."
+  role: "Demonstrate character features."
+var_prompt:
+  - id: start
+    displayName: Start Session
+    node_class: flow
+    type: start-node
+    next: [target: welcome]
+  - id: welcome
+    displayName: Welcome Guest
+    node_class: prompt
+    type: advanced
+    goal: "Greet the stranger warmly."
+    tone: "Friendly"
+    example: "Hello! I am an example character. How can I help you today?"
+    follow_up: "What would you like to discuss?"
+    ext_info: "disabled"
+    need_answer: true
+    next: []

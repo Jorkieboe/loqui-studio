@@ -28,18 +28,18 @@
 
 **Goal:** Implement the flat-file JSON and YAML asset storage engine on the backend, configuring safe parsing logic to handle character specifications without database overhead.
 
-- [ ] **Local Storage Directory Architecture:**
-  - [ ] Create assets structures within `backend/assets/characters/` and `backend/assets/rag_schemes/`.
-  - [ ] Define the default character blueprint within `backend/assets/characters/example/` containing base files: `info.json`, `prompts.yaml`, and `layout.json`.
-- [ ] **`info.json` & `layout.json` Structural Adapters:**
-  - [ ] Implement file utilities to serialize metadata variables (e.g., visual accents, `idle_timeout_seconds`, and index pointers) to JSON.
-  - [ ] Program parser routines in `backend/scripts/api/character.py` to write and read the Vue Flow JSON graph schema (nodes, edges, and positions) directly to and from `layout.json`.
-- [ ] **Block-Style Prompt Serialization (`prompts.yaml`):**
-  - [ ] Configure the `ruamel.yaml` parser instance to enforce strict mapping controls, proper sequence indents, and clean vertical offsets.
-  - [ ] Create custom string presenters (`LiteralDumper`) to force block-style styles (`|` and `|-`) when persisting long character descriptions or narrative constraints to disk.
-- [ ] **Testing Point 2: Verify Asset Serialization**
-  - [ ] Create a mock character via file duplication.
-  - : Execute programmatic modifications to the YAML structure and verify that comments, multi-line block strings, and custom sequences are written to disk without formatting loss.
+- [x] **Local Storage Directory Architecture:**
+  - [x] Create assets structures within `backend/assets/characters/` and `backend/assets/rag_schemes/`.
+  - [x] Define the default character blueprint within `backend/assets/characters/example/` containing base files: `info.json`, `prompts.yaml`, and `layout.json`.
+- [x] **`info.json` & `layout.json` Structural Adapters:**
+  - [x] Implement file utilities to serialize metadata variables (e.g., visual accents, `idle_timeout_seconds`, and index pointers) to JSON.
+  - [x] Program parser routines in `backend/scripts/api/character.py` to write and read the Vue Flow JSON graph schema (nodes, edges, and positions) directly to and from `layout.json`.
+- [x] **Block-Style Prompt Serialization (`prompts.yaml`):**
+  - [x] Configure the `ruamel.yaml` parser instance to enforce strict mapping controls, proper sequence indents, and clean vertical offsets.
+  - [x] Create custom string presenters (`LiteralDumper`) to force block-style styles (`|` and `|-`) when persisting long character descriptions or narrative constraints to disk.
+- [x] **Testing Point 2: Verify Asset Serialization**
+  - [x] Create a mock character via file duplication.
+  - [x] Execute programmatic modifications to the YAML structure and verify that comments, multi-line block strings, and custom sequences are written to disk without formatting loss.
 
 </SECTION>
 

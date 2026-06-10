@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import socketio
+from scripts.api.character import router as character_router
 
 # Initialize socket.io server
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
@@ -18,6 +19,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(character_router, prefix="/api/characters")
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
 

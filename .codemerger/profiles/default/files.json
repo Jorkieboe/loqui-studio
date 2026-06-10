@@ -3,9 +3,16 @@
     "2do.txt",
     "README.md",
     "architecture.md",
+    "backend/assets/characters/example/info.json",
+    "backend/assets/characters/example/layout.json",
+    "backend/assets/characters/example/prompts.yaml",
+    "backend/assets/characters/mock_character/info.json",
+    "backend/assets/characters/mock_character/layout.json",
+    "backend/assets/characters/mock_character/prompts.yaml",
     "backend/config.json",
     "backend/dump/project_reference.md",
     "backend/main.py",
+    "backend/scripts/api/character.py",
     "concept.md",
     "frontend/index.html",
     "frontend/jsconfig.json",
@@ -20,7 +27,13 @@
     "todo.md"
   ],
   "unknown_files": [
+    "backend/assets/characters/example/info.json",
+    "backend/assets/characters/example/layout.json",
+    "backend/assets/characters/example/prompts.yaml",
+    "backend/assets/characters/mock_character/info.json",
+    "backend/assets/characters/mock_character/layout.json",
+    "backend/assets/characters/mock_character/prompts.yaml",
     "backend/dump/project_reference.md"
   ],
-  "total_tokens": 16665
+  "total_tokens": 19144
 }

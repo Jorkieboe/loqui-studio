@@ -1,0 +1,18 @@
+{
+  "id": "example",
+  "name": "Example Character",
+  "description": "An example blueprint character.",
+  "tags": [
+    "RAG",
+    "Historical"
+  ],
+  "language": "en",
+  "color": "#4caf50",
+  "avatar": "/api/characters/item/example/avatar",
+  "idle_timeout_seconds": 300,
+  "rag": {
+    "ragScheme": "example_scheme",
+    "pov": "example_pov",
+    "chunksize": 4
+  }
+}
