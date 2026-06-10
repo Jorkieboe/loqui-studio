@@ -1,0 +1,59 @@
+[
+  {
+    "id": "chunk_01",
+    "text": "At the Battle of Sudom\u011b\u0159 in 1420, Jan \u017di\u017eka deployed wagon forts to decisively defeat royalist cavalry forces.",
+    "pov": [
+      "hussite_commander",
+      "peasant_soldier",
+      "all"
+    ],
+    "metadata": {
+      "locations": [
+        "Sudom\u011b\u0159"
+      ],
+      "tactics": [
+        "wagon fort"
+      ],
+      "dates": [
+        "1420"
+      ]
+    }
+  },
+  {
+    "id": "chunk_02",
+    "text": "The wagon fort (vozov\u00e1 hradba) was an armored mobile wall consisting of standard peasant carts chained together to defend infantry.",
+    "pov": [
+      "hussite_commander",
+      "all"
+    ],
+    "metadata": {
+      "locations": [
+        "Bohemia"
+      ],
+      "tactics": [
+        "wagon fort"
+      ],
+      "dates": []
+    }
+  },
+  {
+    "id": "chunk_03",
+    "text": "In 1421, at the Battle of Kutn\u00e1 Hora, \u017di\u017eka executed the first documented tactical breakthrough of a cavalry encirclement using mobile wagon fort artillery.",
+    "pov": [
+      "hussite_commander",
+      "all"
+    ],
+    "metadata": {
+      "locations": [
+        "Kutn\u00e1 Hora"
+      ],
+      "tactics": [
+        "wagon fort",
+        "artillery"
+      ],
+      "dates": [
+        "1421"
+      ]
+    }
+  }
+]

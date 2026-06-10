@@ -257,6 +257,98 @@ async def upload_avatar(char_id: str, file: UploadFile = File(...)):
 
     return {"status": "success", "url": f"/api/characters/item/{char_id}/avatar"}
 
+def load_character_config_sync(char_id: str) -> dict:
+    char_dir = os.path.join(CHARACTERS_DIR, char_id)
+    if not os.path.exists(char_dir):
+        raise ValueError(f"Character '{char_id}' not found")
+
+    info_file = os.path.join(char_dir, "info.json")
+    prompts_file = os.path.join(char_dir, "prompts.yaml")
+    layout_file = os.path.join(char_dir, "layout.json")
+
+    info_data = {}
+    prompts_data = {}
+    layout_data = {}
+
+    if os.path.exists(info_file):
+        with open(info_file, "r", encoding="utf-8") as f:
+            info_data = json.load(f)
+
+    if os.path.exists(prompts_file):
+        yaml = get_yaml_parser()
+        with open(prompts_file, "r", encoding="utf-8") as f:
+            prompts_data = yaml.load(f)
+
+    if os.path.exists(layout_file):
+        with open(layout_file, "r", encoding="utf-8") as f:
+            layout_data = json.load(f)
+
+    return {
+        "info": info_data,
+        "prompts": prompts_data,
+        "layout": layout_data
+    }
+
+@router.post("/test-draft")
+async def test_draft(payload: dict):
+    draft_config = payload.get("draft_config", {})
+    session_state = payload.get("session_state", {})
+    user_input = payload.get("user_input", "")
+
+    if not user_input:
+        raise HTTPException(status_code=400, detail="Missing user_input")
+
+    info = draft_config.get("info", {})
+    prompts = draft_config.get("prompts", {})
+
+    name = info.get("name")
+    description = info.get("description")
+    dos = prompts.get("do", [])
+    donts = prompts.get("don't", [])
+
+    if not name or not description or not dos or not donts:
+        missing = []
+        if not name: missing.append("Name")
+        if not description: missing.append("Description")
+        if not dos: missing.append("Do's")
+        if not donts: missing.append("Don'ts")
+        raise HTTPException(
+            status_code=422,
+            detail=f"Validation failed: Missing required fields: {', '.join(missing)}"
+        )
+
+    context = prompts.get("context", {})
+    for field in ["setting", "personality", "background", "role"]:
+        if not context.get(field):
+            context[field] = "chat with the user"
+    prompts["context"] = context
+
+    active_node_id = session_state.get("active_node_id")
+    history = session_state.get("history", [])
+
+    try:
+        from scripts.core.orchestrator import run_dialogue_pipeline
+        pipeline_result = run_dialogue_pipeline(
+            user_input=user_input,
+            active_node_id=active_node_id,
+            history=history,
+            character_config=draft_config
+        )
+
+        response_text = ""
+        for chunk in pipeline_result["response_stream"]:
+            response_text += chunk
+
+        return {
+            "status": "success",
+            "text": response_text,
+            "next_node_id": pipeline_result["next_node_id"],
+            "retrieved_chunks": pipeline_result["retrieved_chunks"],
+            "metadata_categories": pipeline_result["metadata_categories"]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Pipeline execution failed: {str(e)}")
+
 @router.get("/test-serialization")
 async def test_serialization():
     mock_id = "mock_character"

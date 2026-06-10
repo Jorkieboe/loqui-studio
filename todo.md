@@ -49,30 +49,30 @@
 
 **Goal:** Develop the backend orchestration logic, implementing state-machine step parsing, hybrid RAG context assembly, and OpenAI-compatible API execution with modular parameter configurations.
 
-- [ ] **Step 1: Input Evaluation & State Machine Step Parsing (`chat_session.py`):**
-  - [ ] Receive the raw user message input from the active session router.
-  - [ ] Parse and evaluate which dialog node or step to follow by direct traversal of the Vue Flow node and edge list stored in the layout schema.
-  - [ ] Program safety-relevance checkers (`validate_response`) to validate conversation bounds. If input is off-topic, redirect context dynamically to the global `deflect` node.
-  - [ ] Program `pick_step` using structured JSON schemas to classify user responses when choosing paths at branching split connections.
-- [ ] **Step 2: Contextual Search Query Rewriting (`rag_service.py`):**
-  - [ ] If RAG is enabled, program query-contextualization routines (`rewrite_query`) to combine the user's raw message and the last AI response (conversational turn history) into a focused search query.
-- [ ] **Step 3: Document Retrieval and Search Pipelines (`rag_service.py`):**
-  - [ ] Execute asymmetrical dense FAISS index lookups and Rank-BM25 sparse searches over the compiled query.
-  - [ ] Apply POV filters to restrict chunk matches and rank the final document results using the RRF algorithm:
+- [x] **Step 1: Input Evaluation & State Machine Step Parsing (`chatsession.py`):**
+  - [x] Receive the raw user message input from the active session router.
+  - [x] Parse and evaluate which dialog node or step to follow by direct traversal of the Vue Flow node and edge list stored in the layout schema.
+  - [x] Program safety-relevance checkers (`validate_response`) to validate conversation bounds. If input is off-topic, redirect context dynamically to the global `deflect` node.
+  - [x] Program `pick_step` using structured JSON schemas to classify user responses when choosing paths at branching split connections.
+- [x] **Step 2: Contextual Search Query Rewriting (`rag_service.py`):**
+  - [x] If RAG is enabled, program query-contextualization routines (`rewrite_query`) to combine the user's raw message and the last AI response (conversational turn history) into a focused search query.
+- [x] **Step 3: Document Retrieval and Search Pipelines (`rag_service.py`):**
+  - [x] Execute asymmetrical dense FAISS index lookups and Rank-BM25 sparse searches over the compiled query.
+  - [x] Apply POV filters to restrict chunk matches and rank the final document results using the RRF algorithm:
     $$RRF\_Score(d \in D) = \sum_{m \in M} \frac{1}{60 + r_m(d)}$$
-  - [ ] Extract contextual categories from the document candidates using defined extraction metadata guidelines.
-- [ ] **Step 4: Structured Dialogue Payload Assembly (`orchestrator.py`):**
-  - [ ] Assemble all compiled elements: the base system instructions (`base_prompt`), the active state prompt parameters (`var_prompt`), chronological conversation history lists, and the retrieved RAG background context documents.
-- [ ] **Step 5: Grounded LLM Client Execution (`llm_service.py`):**
-  - [ ] Send the fully assembled payload to `llm_service.py` to trigger text generation or stream-parsing delta outputs.
-  - [ ] Implement `api_request` to dispatch conversational payloads to target endpoint formats (local API, RunPod, or OpenAI).
-  - [ ] Incorporate model parameter presets from `config.json` to dynamically override max tokens, temperature, penalties, and stop tokens.
-  - [ ] Integrate stream processing and SSE-line parsing (`data: ` delta outputs) to stream responses chunk-by-chunk to the calling application thread.
-  - [ ] Integrate a token-counting utility using `tiktoken` to log exact input and output lengths prior to and during generation.
-- [ ] **Testing Point 3: Verify RAG, FSM, and LLM Orchestration**
-  - [ ] Execute a test script to confirm that the state machine, hybrid retrieval, and `llm_service` process a query simultaneously.
-  - [ ] Verify that model payloads contain parsed system rules, active settings, and RAG context blocks.
-  - [ ] Confirm that the local client receives streamed text chunks from the selected model preset without error.
+  - [x] Extract contextual categories from the document candidates using defined extraction metadata guidelines.
+- [x] **Step 4: Structured Dialogue Payload Assembly (`orchestrator.py`):**
+  - [x] Assemble all compiled elements: the base system instructions (`base_prompt`), the active state prompt parameters (`var_prompt`), chronological conversation history lists, and the retrieved RAG background context documents.
+- [x] **Step 5: Grounded LLM Client Execution (`llm_service.py`):**
+  - [x] Send the fully assembled payload to `llm_service.py` to trigger text generation or stream-parsing delta outputs.
+  - [x] Implement `api_request` to dispatch conversational payloads to target endpoint formats (local API, RunPod, or OpenAI).
+  - [x] Incorporate model parameter presets from `config.json` to dynamically override max tokens, temperature, penalties, and stop tokens.
+  - [x] Integrate stream processing and SSE-line parsing (`data: ` delta outputs) to stream responses chunk-by-chunk to the calling application thread.
+  - [x] Integrate a token-counting utility using `tiktoken` to log exact input and output lengths prior to and during generation.
+- [x] **Testing Point 3: Verify RAG, FSM, and LLM Orchestration**
+  - [x] Execute a test script to confirm that the state machine, hybrid retrieval, and `llm_service` process a query simultaneously.
+  - [x] Verify that model payloads contain parsed system rules, active settings, and RAG context blocks.
+  - [x] Confirm that the local client receives streamed text chunks from the selected model preset without error.
 
 </SECTION>
 
@@ -82,20 +82,20 @@
 
 **Goal:** Implement low-latency Socket.IO communication and establish lazy-loaded, thread-safe speech-to-text (STT) and text-to-speech (TTS) engines.
 
-- [ ] **Socket.IO Real-Time Dispatcher:**
-  - [ ] Establish the async socket server instance (`sio`) inside `backend/main.py` with custom buffer limits to handle binary streaming.
-  - [ ] Set up event listeners to capture WebM mic arrays, handle disconnect triggers, and route new chat requests.
-- [ ] **Unified Generation Pipeline Orchestrator:**
-  - [ ] Program the backend session routing loop to process messages through a single execution path.
-  - [ ] Implement parameter injection overrides for sandbox mode. This enables running prompts, transient graph nodes, and custom variable prompts from memory without making persistent writes to disk.
-  - [ ] Create state models in `backend/scripts/core/context.py` to package context parameters cleanly.
-- [ ] **Lazy-Loaded Speech Processing Engines:**
-  - [ ] Set up the Hugging Face Whisper pipeline to load on a separate thread, preventing main-thread blocking on startup.
-  - [ ] Implement audio decoding routines inside `backend/scripts/services/transcription_service.py` to convert incoming WebM chunks into 16kHz float32 arrays via FFmpeg.
-  - [ ] Integrate local TTS routines to stream generated audio back to the client.
-- [ ] **Testing Point 4: Verify Bidirectional Pipeline**
-  - [ ] Use tool simulations to stream a raw audio file into the WebSocket pipeline.
-  - [ ] Verify that Whisper processes the stream in memory, that the orchestrator executes, and that text chunks and binary audio play back as expected.
+- [x] **Socket.IO Real-Time Dispatcher:**
+  - [x] Establish the async socket server instance (`sio`) inside `backend/main.py` with custom buffer limits to handle binary streaming.
+  - [x] Set up event listeners to capture WebM mic arrays, handle disconnect triggers, and route new chat requests.
+- [x] **Unified Generation Pipeline Orchestrator:**
+  - [x] Program the backend session routing loop to process messages through a single execution path.
+  - [x] Implement parameter injection overrides for sandbox mode. This enables running prompts, transient graph nodes, and custom variable prompts from memory without making persistent writes to disk.
+  - [x] Create state models in `backend/scripts/core/context.py` to package context parameters cleanly.
+- [x] **Lazy-Loaded Speech Processing Engines:**
+  - [x] Set up the Hugging Face Whisper pipeline to load on a separate thread, preventing main-thread blocking on startup.
+  - [x] Implement audio decoding routines inside `backend/scripts/services/transcription_service.py` to convert incoming WebM chunks into 16kHz float32 arrays via FFmpeg.
+  - [x] Integrate local TTS routines to stream generated audio back to the client.
+- [x] **Testing Point 4: Verify Bidirectional Pipeline**
+  - [x] Use tool simulations to stream a raw audio file into the WebSocket pipeline.
+  - [x] Verify that Whisper processes the stream in memory, that the orchestrator executes, and that text chunks and binary audio play back as expected.
 
 </SECTION>
 

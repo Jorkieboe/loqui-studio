@@ -1,4 +1,16 @@
 {
   "name": "Default",
-  "expanded_dirs": []
+  "expanded_dirs": [
+    "backend",
+    "backend/assets",
+    "backend/assets/characters",
+    "backend/assets/characters/example",
+    "backend/assets/characters/mock_character",
+    "backend/assets/rag_schemes",
+    "backend/assets/rag_schemes/hussite_wars",
+    "backend/scripts",
+    "backend/scripts/api",
+    "backend/scripts/core",
+    "backend/scripts/services"
+  ]
 }

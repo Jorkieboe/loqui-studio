@@ -36,17 +36,17 @@
   },
   {
     "path": "todo.md",
-    "tokens": 2964,
+    "tokens": 3002,
     "lines": 168,
-    "mtime": 1781094725.940323,
-    "hash": "cc82d47e15845e5d7920f59084bfdc1780ad2431"
+    "mtime": 1781104343.7273161,
+    "hash": "2ececad9e44ba7af69b2c7ac000563a8e943fe83"
   },
   {
     "path": "requirements.txt",
-    "tokens": 142,
-    "lines": 15,
-    "mtime": 1781033245.1712122,
-    "hash": "f9537816e033cf6ba4df7b2aafa474716ae55584"
+    "tokens": 152,
+    "lines": 16,
+    "mtime": 1781104343.2276664,
+    "hash": "e774dbd360523ba1fba875067039a412743b171c"
   },
   {
     "path": "backend/config.json",
@@ -57,10 +57,10 @@
   },
   {
     "path": "backend/main.py",
-    "tokens": 360,
-    "lines": 47,
-    "mtime": 1781094726.8497481,
-    "hash": "118a0f031af7b9362f28852b56cd27ea5c2159c8"
+    "tokens": 1293,
+    "lines": 186,
+    "mtime": 1781108687.2378905,
+    "hash": "f5f120b35b83d6b3076eb44f260fe60bb58551d8"
   },
   {
     "path": "frontend/vite.config.mjs",
@@ -107,9 +107,72 @@
   },
   {
     "path": "backend/scripts/api/character.py",
-    "tokens": 2444,
-    "lines": 298,
-    "mtime": 1781094724.8438523,
-    "hash": "b1220779902b08388df7fb09f83225320f467ffe"
+    "tokens": 3149,
+    "lines": 390,
+    "mtime": 1781104343.5187304,
+    "hash": "04f43ff3b1fbc0d190a8cd70561b9cf0b0a499bc"
+  },
+  {
+    "path": "backend/scripts/services/llm_service.py",
+    "tokens": 780,
+    "lines": 96,
+    "mtime": 1781104343.3059735,
+    "hash": "b4eec39dc25725a980605d1a496550f9fd5b7352"
+  },
+  {
+    "path": "backend/scripts/services/rag_service.py",
+    "tokens": 2046,
+    "lines": 232,
+    "mtime": 1781097396.1716294,
+    "hash": "10cf045e1d976b05c93e663fa06e37cadbb11d84"
+  },
+  {
+    "path": "backend/scripts/core/chatsession.py",
+    "tokens": 1332,
+    "lines": 144,
+    "mtime": 1781097396.2569127,
+    "hash": "2ad80350ca8aec338e8c35772c2f4af3e5e47085"
+  },
+  {
+    "path": "backend/scripts/core/orchestrator.py",
+    "tokens": 1059,
+    "lines": 136,
+    "mtime": 1781097396.3397748,
+    "hash": "055a71855328c513f841c05fa349f79a4ba5be88"
+  },
+  {
+    "path": "backend/scripts/test_orchestration.py",
+    "tokens": 894,
+    "lines": 118,
+    "mtime": 1781104343.4262495,
+    "hash": "de5572667c722a1c9a3525a9176631e456aad6ed"
+  },
+  {
+    "path": "backend/scripts/core/context.py",
+    "tokens": 128,
+    "lines": 16,
+    "mtime": 1781104342.9560342,
+    "hash": "0ec3917cad0532ee2c171c562b96237dfa2f364d"
+  },
+  {
+    "path": "backend/scripts/services/transcription_service.py",
+    "tokens": 644,
+    "lines": 90,
+    "mtime": 1781104343.0384722,
+    "hash": "9e783baa8f875061b5f7a07df90da6000d64981a"
+  },
+  {
+    "path": "backend/scripts/services/tts_service.py",
+    "tokens": 632,
+    "lines": 88,
+    "mtime": 1781104343.1248834,
+    "hash": "74e156933032b1123a4a8fa1daa7984c9f76a040"
+  },
+  {
+    "path": "backend/scripts/test_draft_endpoint.py",
+    "tokens": 1094,
+    "lines": 140,
+    "mtime": 1781107073.3489819,
+    "hash": "1a4645b49c9ae1871b8f5f230d6e935356e58fa3"
   }
 ]
