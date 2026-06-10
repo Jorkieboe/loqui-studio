@@ -1,0 +1,4 @@
+- Set up initial environment configuration
+- Verify FastAPI ASGI backend connection
+- Verify Vue 3 + Vite client connection
+- Configure hybrid search and vector index structures

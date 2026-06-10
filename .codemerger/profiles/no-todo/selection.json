@@ -1,0 +1,122 @@
+[
+  {
+    "path": "backend/config.json",
+    "tokens": 106,
+    "ignoreTokens": false,
+    "lines": 15,
+    "mtime": 1781033245.2230594,
+    "hash": "ffd87e9382b7b82f42bd150540461323e4ed62fb"
+  },
+  {
+    "path": "backend/main.py",
+    "tokens": 338,
+    "ignoreTokens": false,
+    "lines": 44,
+    "mtime": 1781093176.0140398,
+    "hash": "de4f5f7b2be0da5391e590f9032ef9e8f47a7d9c"
+  },
+  {
+    "path": "frontend/src/App.vue",
+    "tokens": 824,
+    "ignoreTokens": false,
+    "lines": 143,
+    "mtime": 1781033245.647907,
+    "hash": "5e1da33f1012630cd292a8c016b0684d33429324"
+  },
+  {
+    "path": "frontend/src/main.js",
+    "tokens": 45,
+    "ignoreTokens": false,
+    "lines": 7,
+    "mtime": 1781033245.5870197,
+    "hash": "51565fd50344f2d6fc37c656870fd5a4153fe045"
+  },
+  {
+    "path": "frontend/index.html",
+    "tokens": 92,
+    "ignoreTokens": false,
+    "lines": 12,
+    "mtime": 1781033245.5230684,
+    "hash": "50fbad637cf09cc8be14f91e6a39be66d66be401"
+  },
+  {
+    "path": "frontend/jsconfig.json",
+    "tokens": 88,
+    "ignoreTokens": false,
+    "lines": 13,
+    "mtime": 1781033245.458656,
+    "hash": "0b91a462a9945c5efe84bc226649ab0501cf567f"
+  },
+  {
+    "path": "frontend/vite.config.mjs",
+    "tokens": 172,
+    "ignoreTokens": false,
+    "lines": 27,
+    "mtime": 1781033245.3892832,
+    "hash": "9c7b0892095553fd2484e4a2cffc614194657493"
+  },
+  {
+    "path": "2do.txt",
+    "tokens": 35,
+    "ignoreTokens": false,
+    "lines": 4,
+    "mtime": 1781032578.7253697,
+    "hash": "e46814ac9412bb023b802d66528d1e2055fae4e6"
+  },
+  {
+    "path": "architecture.md",
+    "tokens": 5962,
+    "ignoreTokens": false,
+    "lines": 551,
+    "mtime": 1781032578.7326238,
+    "hash": "16257137ed8ff2104a8f04a4a4d21e782203504f"
+  },
+  {
+    "path": "concept.md",
+    "tokens": 4363,
+    "ignoreTokens": false,
+    "lines": 190,
+    "mtime": 1781032578.7302687,
+    "hash": "d47689476466e40db63ff41e1d550ff872b2aa91"
+  },
+  {
+    "path": "go.bat",
+    "tokens": 592,
+    "ignoreTokens": false,
+    "lines": 86,
+    "mtime": 1781033679.7590935,
+    "hash": "f272c6ab908e2d45046d56774a7efe2d5d90c920"
+  },
+  {
+    "path": "llm.md",
+    "tokens": 254,
+    "ignoreTokens": false,
+    "lines": 15,
+    "mtime": 1781032578.7263699,
+    "hash": "b544ad6462322333114478c86b307f42a506cdf5"
+  },
+  {
+    "path": "package.json",
+    "tokens": 293,
+    "ignoreTokens": false,
+    "lines": 28,
+    "mtime": 1781034489.8851547,
+    "hash": "fcbd95f6c4f58a94eedefea13f32baa9e6f6d5b8"
+  },
+  {
+    "path": "README.md",
+    "tokens": 443,
+    "ignoreTokens": false,
+    "lines": 53,
+    "mtime": 1781032578.7243433,
+    "hash": "3dedc27c7721420bc3bbd8d080aaa5c5cb0c5dfa"
+  },
+  {
+    "path": "requirements.txt",
+    "tokens": 142,
+    "ignoreTokens": false,
+    "lines": 15,
+    "mtime": 1781033245.1712122,
+    "hash": "f9537816e033cf6ba4df7b2aafa474716ae55584"
+  }
+]

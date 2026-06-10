@@ -1,0 +1,26 @@
+{
+  "known_files": [
+    "2do.txt",
+    "README.md",
+    "architecture.md",
+    "backend/config.json",
+    "backend/dump/project_reference.md",
+    "backend/main.py",
+    "concept.md",
+    "frontend/index.html",
+    "frontend/jsconfig.json",
+    "frontend/src/App.vue",
+    "frontend/src/main.js",
+    "frontend/vite.config.mjs",
+    "go.bat",
+    "llm.md",
+    "package.json",
+    "project-starter.json",
+    "requirements.txt",
+    "todo.md"
+  ],
+  "unknown_files": [
+    "backend/dump/project_reference.md"
+  ],
+  "total_tokens": 13749
+}

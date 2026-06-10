@@ -1,0 +1,15 @@
+{
+  "api_port": 5000,
+  "api_host": "0.0.0.0",
+  "idle_timeout_seconds": 300,
+  "llm_presets": {
+    "default": {
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "max_tokens": 150,
+      "presence_penalty": 0.0,
+      "frequency_penalty": 0.0,
+      "stop": null
+    }
+  }
+}
