@@ -98,13 +98,20 @@ async def chat_message(sid, data):
 
         char_config = load_character_config_sync(chatsession.character_id)
 
+        loop_state = {
+            "counters": chatsession.loop_counters,
+            "active_loop_id": chatsession.active_loop_id
+        }
+
         pipeline_result = run_dialogue_pipeline(
             user_input=text,
             active_node_id=chatsession.current_node_id,
             history=chatsession.history,
-            character_config=char_config
+            character_config=char_config,
+            loop_state=loop_state
         )
 
+        chatsession.active_loop_id = loop_state.get("active_loop_id")
         chatsession.next_node_id = pipeline_result["next_node_id"]
         chatsession.possible_next_nodes = pipeline_result["possible_next_nodes"]
         response_stream = pipeline_result["response_stream"]
@@ -121,9 +128,11 @@ async def chat_message(sid, data):
         # for audio_chunk in stream_tts(full_text):
         #     await sio.emit("audio_chunk", audio_chunk, to=sid)
 
+        session_ended = chatsession.current_node_id in ["end", "end-node"]
         await sio.emit("response_complete", {
             "next_node_id": chatsession.current_node_id,
             "possible_next_nodes": chatsession.possible_next_nodes,
+            "session_ended": session_ended,
             "retrieved_chunks": pipeline_result["retrieved_chunks"]
         }, to=sid)
 
@@ -170,9 +179,11 @@ async def audio_message(sid, data):
         await sio.emit("transcription", {"text": transcription}, to=sid)
 
         if not transcription.strip():
+            session_ended = chatsession.current_node_id in ["end", "end-node"]
             await sio.emit("response_complete", {
                 "next_node_id": chatsession.current_node_id,
                 "possible_next_nodes": chatsession.possible_next_nodes,
+                "session_ended": session_ended,
                 "retrieved_chunks": []
             }, to=sid)
             return
@@ -186,13 +197,20 @@ async def audio_message(sid, data):
 
         char_config = load_character_config_sync(chatsession.character_id)
 
+        loop_state = {
+            "counters": chatsession.loop_counters,
+            "active_loop_id": chatsession.active_loop_id
+        }
+
         pipeline_result = run_dialogue_pipeline(
             user_input=transcription,
             active_node_id=chatsession.current_node_id,
             history=chatsession.history,
-            character_config=char_config
+            character_config=char_config,
+            loop_state=loop_state
         )
 
+        chatsession.active_loop_id = loop_state.get("active_loop_id")
         chatsession.next_node_id = pipeline_result["next_node_id"]
         chatsession.possible_next_nodes = pipeline_result["possible_next_nodes"]
         response_stream = pipeline_result["response_stream"]
@@ -209,9 +227,11 @@ async def audio_message(sid, data):
         for audio_chunk in stream_tts(full_text):
             await sio.emit("audio_chunk", audio_chunk, to=sid)
 
+        session_ended = chatsession.current_node_id in ["end", "end-node"]
         await sio.emit("response_complete", {
             "next_node_id": chatsession.current_node_id,
             "possible_next_nodes": chatsession.possible_next_nodes,
+            "session_ended": session_ended,
             "retrieved_chunks": pipeline_result["retrieved_chunks"]
         }, to=sid)
 

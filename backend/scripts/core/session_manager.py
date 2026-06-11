@@ -7,6 +7,8 @@ class ChatSession:
         self.current_node_id = current_node_id
         self.next_node_id = next_node_id
         self.possible_next_nodes = possible_next_nodes if possible_next_nodes is not None else []
+        self.loop_counters = {}
+        self.active_loop_id = None
 
 class Session:
     def __init__(self, session_id):

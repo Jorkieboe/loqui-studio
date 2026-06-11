@@ -62,7 +62,7 @@ def assemble_system_prompt(
 
     return system_prompt
 
-def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Dict[str, str]], character_config: dict) -> Dict[str, Any]:
+def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Dict[str, str]], character_config: dict, loop_state: dict = None) -> Dict[str, Any]:
     """
         get character data, find current node, retrieve relevant information, generate response
     """
@@ -82,7 +82,8 @@ def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Di
         layout=layout,
         var_prompt=var_prompt,
         base_prompt=base_prompt,
-        setting=context.get("setting", "")
+        setting=context.get("setting", ""),
+        loop_state=loop_state
     )
 
     retrieved_chunks = []
@@ -97,21 +98,21 @@ def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Di
     ext_info = active_node_config.get("ext_info", "disabled")
     print(ext_info)
 
-    if rag_scheme and ext_info == "fetch":
-        print('do rag')
-        search_query = rewrite_query(user_input, history)
-        logger.info(f"[Orchestrator] Rewritten search query: {search_query}")
+    # if rag_scheme and ext_info == "fetch":
+    #     print('do rag')
+    #     search_query = rewrite_query(user_input, history)
+    #     logger.info(f"[Orchestrator] Rewritten search query: {search_query}")
 
-        pov = rag_settings.get("pov", "all")
-        chunksize = rag_settings.get("chunksize", 4)
-        retrieved_chunks = retrieve_hybrid(search_query, rag_scheme, pov, chunksize)
+    #     pov = rag_settings.get("pov", "all")
+    #     chunksize = rag_settings.get("chunksize", 4)
+    #     retrieved_chunks = retrieve_hybrid(search_query, rag_scheme, pov, chunksize)
 
-        if retrieved_chunks:
-            rag_context_text = "Retrieved Chunks:\n"
-            for chunk in retrieved_chunks:
-                rag_context_text += f"- {chunk['text']}\n"
+    #     if retrieved_chunks:
+    #         rag_context_text = "Retrieved Chunks:\n"
+    #         for chunk in retrieved_chunks:
+    #             rag_context_text += f"- {chunk['text']}\n"
 
-            metadata_categories = extract_metadata_categories(retrieved_chunks)
+    #         metadata_categories = extract_metadata_categories(retrieved_chunks)
 
     system_prompt = assemble_system_prompt(
         base_prompt=base_prompt,

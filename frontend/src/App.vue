@@ -136,6 +136,12 @@ export default {
         if (data && data.possible_next_nodes) {
           possibleNextNodes.value = data.possible_next_nodes;
         }
+        if (data && data.session_ended) {
+          alert("Dialogue session has completed. Resetting conversational playground.");
+          chatHistory.value = [];
+          currentNodeId.value = 'start';
+          possibleNextNodes.value = [];
+        }
       });
 
       socket.on('error', (err) => {
