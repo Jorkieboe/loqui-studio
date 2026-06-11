@@ -66,6 +66,10 @@ def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Di
     """
         get character data, find current node, retrieve relevant information, generate response
     """
+    from scripts.services.ollama_service import manage_models, is_ollama_available, load_ollama_config
+    ollama_cfg = load_ollama_config()
+    if ollama_cfg.get("enabled", True) and is_ollama_available():
+        manage_models()
     info = character_config.get("info", {})
     prompts = character_config.get("prompts", {})
     layout = character_config.get("layout", {})

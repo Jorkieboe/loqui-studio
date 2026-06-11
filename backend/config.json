@@ -11,5 +11,11 @@
       "frequency_penalty": 0.0,
       "stop": null
     }
+  },
+  "ollama": {
+    "enabled": true,
+    "host": "http://127.0.0.1:11434",
+    "llm_model": "batiai/gemma4-e2b:q4",
+    "embedding_model": "qllama/multilingual-e5-base"
   }
 }

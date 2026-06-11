@@ -107,9 +107,6 @@ class RAGIndex:
 
         try:
             import faiss
-            dimension = 1536
-            self.faiss_index = faiss.IndexFlatIP(dimension)
-
             faiss_path = os.path.join(self.scheme_dir, "index.faiss")
             if os.path.exists(faiss_path):
                 self.faiss_index = faiss.read_index(faiss_path)
@@ -121,8 +118,9 @@ class RAGIndex:
                         emb = get_embedding(chunk["text"])
                         chunk["embedding"] = emb
                     embeddings.append(emb)
-
                 if embeddings:
+                    dimension = len(embeddings[0])
+                    self.faiss_index = faiss.IndexFlatIP(dimension)
                     emb_matrix = np.array(embeddings, dtype=np.float32)
                     norms = np.linalg.norm(emb_matrix, axis=1, keepdims=True)
                     norms[norms == 0] = 1.0
@@ -215,13 +213,12 @@ def rewrite_query(user_message: str, history: List[Dict[str, str]]) -> str:
 
     prompt = f"""
         Given the following conversational turn history and a new query,
-        rewrite the new query to be a self-contained, descriptive search query in the same language. 
+        rewrite the new query to be a self-contained, descriptive search query in the same language.
         Keep it concise, and do not answer it. Only return the rewritten query text.
         History: {formatted_history}
         New Query: {user_message}
         Rewritten Query:
     """
-
 
     try:
         from scripts.services.llm_service import api_request

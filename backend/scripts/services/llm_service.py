@@ -52,12 +52,19 @@ def api_request(
     input_tokens = count_tokens(input_text, preset.get("model", "gpt-4o-mini"))
     logger.info(f"[LLM] Input tokens: {input_tokens}")
 
+    from scripts.services.ollama_service import is_ollama_available, ollama_chat_request, load_ollama_config
+    ollama_cfg = load_ollama_config()
+    ollama_active = ollama_cfg.get("enabled", True) and is_ollama_available()
     if not api_key:
-        logger.warning("[LLM] OPENAI_API_KEY not found in environment. Using fallback simulator.")
+        if ollama_active:
+            llm_model = ollama_cfg.get("llm_model", "llama3")
+            logger.info(f"[LLM] Routing request to Ollama model: {llm_model}")
+            return ollama_chat_request(messages, llm_model, stream=stream)
+        logger.warning("[LLM] OPENAI_API_KEY not found in environment and Ollama is not available. Using fallback simulator.")
         def mock_generator():
             fallback_response = (
-                "[SIMULATION MODE] This is a simulated character response because no OPENAI_API_KEY was found in the environment. "
-                "Ensure your API keys are configured for full generative features."
+                "[SIMULATION MODE] This is a simulated character response because no OPENAI_API_KEY was found in the environment and Ollama is not active. "
+                "Ensure your API keys or local Ollama instances are configured."
             )
             for word in fallback_response.split(" "):
                 yield word + " "
