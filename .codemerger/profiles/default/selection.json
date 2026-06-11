@@ -57,10 +57,10 @@
   },
   {
     "path": "backend/main.py",
-    "tokens": 1293,
-    "lines": 186,
-    "mtime": 1781108687.2378905,
-    "hash": "f5f120b35b83d6b3076eb44f260fe60bb58551d8"
+    "tokens": 1718,
+    "lines": 232,
+    "mtime": 1781166850.594143,
+    "hash": "b87c8b0b298f77d35d90ce2f755566df7290d29d"
   },
   {
     "path": "frontend/vite.config.mjs",
@@ -92,10 +92,10 @@
   },
   {
     "path": "frontend/src/App.vue",
-    "tokens": 824,
-    "lines": 143,
-    "mtime": 1781033245.647907,
-    "hash": "5e1da33f1012630cd292a8c016b0684d33429324"
+    "tokens": 2150,
+    "lines": 351,
+    "mtime": 1781166850.843593,
+    "hash": "cdbfb695c84ec048e6e7f5c9c10d32cf207b6ada"
   },
   {
     "path": "package.json",
@@ -128,17 +128,17 @@
   },
   {
     "path": "backend/scripts/core/chatsession.py",
-    "tokens": 1332,
-    "lines": 144,
-    "mtime": 1781097396.2569127,
-    "hash": "2ad80350ca8aec338e8c35772c2f4af3e5e47085"
+    "tokens": 867,
+    "lines": 105,
+    "mtime": 1781166850.253157,
+    "hash": "9495116e6eedb77b10c9e13cf579ebb1f1aae12d"
   },
   {
     "path": "backend/scripts/core/orchestrator.py",
-    "tokens": 1059,
-    "lines": 136,
-    "mtime": 1781097396.3397748,
-    "hash": "055a71855328c513f841c05fa349f79a4ba5be88"
+    "tokens": 1130,
+    "lines": 142,
+    "mtime": 1781166850.462837,
+    "hash": "48093dd628d0ab4ca9c5c6c12f8f8d591d9b8a2e"
   },
   {
     "path": "backend/scripts/test_orchestration.py",

@@ -15,9 +15,12 @@ from scripts.api.character import router as character_router, load_character_con
 from scripts.services.transcription_service import transcribe_audio, load_whisper_async
 from scripts.services.tts_service import stream_tts
 from scripts.core.orchestrator import run_dialogue_pipeline
+from scripts.core.session_manager import SessionManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("main")
+
+session_manager = SessionManager()
 
 # Initialize socket.io server with strict binary buffer allowances
 sio = socketio.AsyncServer(
@@ -54,12 +57,14 @@ async def get_config():
 @sio.event
 async def connect(sid, environ):
     logger.info(f"Client connected: {sid}")
+    session_manager.create_session(sid)
     load_whisper_async()
     await sio.emit("status_update", {"whisper_ready": True}, to=sid)
 
 @sio.event
 async def disconnect(sid):
     logger.info(f"Client disconnected: {sid}")
+    session_manager.remove_session(sid)
 
 @sio.event
 async def chat_message(sid, data):
@@ -73,20 +78,35 @@ async def chat_message(sid, data):
     }
     """
     try:
+        session = session_manager.get_session(sid)
+        if not session:
+            session = session_manager.create_session(sid)
+
+        chatsession = session.chatsession
+
         char_id = data.get("character_id")
         text = data.get("text", "")
         active_node_id = data.get("active_node_id")
         history = data.get("history", [])
 
-        char_config = load_character_config_sync(char_id)
+        if chatsession.character_id is None and char_id:
+            chatsession.character_id = char_id
+        if chatsession.current_node_id is None:
+            chatsession.current_node_id = active_node_id or "start"
+        if not chatsession.history and history:
+            chatsession.history = history
+
+        char_config = load_character_config_sync(chatsession.character_id)
 
         pipeline_result = run_dialogue_pipeline(
             user_input=text,
-            active_node_id=active_node_id,
-            history=history,
+            active_node_id=chatsession.current_node_id,
+            history=chatsession.history,
             character_config=char_config
         )
 
+        chatsession.next_node_id = pipeline_result["next_node_id"]
+        chatsession.possible_next_nodes = pipeline_result["possible_next_nodes"]
         response_stream = pipeline_result["response_stream"]
         full_text = ""
 
@@ -94,11 +114,16 @@ async def chat_message(sid, data):
             full_text += chunk
             await sio.emit("response_chunk", {"text": chunk}, to=sid)
 
-        for audio_chunk in stream_tts(full_text):
-            await sio.emit("audio_chunk", audio_chunk, to=sid)
+        chatsession.history.append({"role": "user", "text": text})
+        chatsession.history.append({"role": "assistant", "text": full_text})
+        chatsession.current_node_id = chatsession.next_node_id
+
+        # for audio_chunk in stream_tts(full_text):
+        #     await sio.emit("audio_chunk", audio_chunk, to=sid)
 
         await sio.emit("response_complete", {
-            "next_node_id": pipeline_result["next_node_id"],
+            "next_node_id": chatsession.current_node_id,
+            "possible_next_nodes": chatsession.possible_next_nodes,
             "retrieved_chunks": pipeline_result["retrieved_chunks"]
         }, to=sid)
 
@@ -113,6 +138,12 @@ async def audio_message(sid, data):
     data format: dict with binary sound data or raw bytes
     """
     try:
+        session = session_manager.get_session(sid)
+        if not session:
+            session = session_manager.create_session(sid)
+
+        chatsession = session.chatsession
+
         audio_bytes = b""
         char_id = "example"
         active_node_id = None
@@ -140,20 +171,30 @@ async def audio_message(sid, data):
 
         if not transcription.strip():
             await sio.emit("response_complete", {
-                "next_node_id": active_node_id,
+                "next_node_id": chatsession.current_node_id,
+                "possible_next_nodes": chatsession.possible_next_nodes,
                 "retrieved_chunks": []
             }, to=sid)
             return
 
-        char_config = load_character_config_sync(char_id)
+        if chatsession.character_id is None and char_id:
+            chatsession.character_id = char_id
+        if chatsession.current_node_id is None:
+            chatsession.current_node_id = active_node_id or "start"
+        if not chatsession.history and history:
+            chatsession.history = history
+
+        char_config = load_character_config_sync(chatsession.character_id)
 
         pipeline_result = run_dialogue_pipeline(
             user_input=transcription,
-            active_node_id=active_node_id,
-            history=history,
+            active_node_id=chatsession.current_node_id,
+            history=chatsession.history,
             character_config=char_config
         )
 
+        chatsession.next_node_id = pipeline_result["next_node_id"]
+        chatsession.possible_next_nodes = pipeline_result["possible_next_nodes"]
         response_stream = pipeline_result["response_stream"]
         full_text = ""
 
@@ -161,11 +202,16 @@ async def audio_message(sid, data):
             full_text += chunk
             await sio.emit("response_chunk", {"text": chunk}, to=sid)
 
+        chatsession.history.append({"role": "user", "text": transcription})
+        chatsession.history.append({"role": "assistant", "text": full_text})
+        chatsession.current_node_id = chatsession.next_node_id
+
         for audio_chunk in stream_tts(full_text):
             await sio.emit("audio_chunk", audio_chunk, to=sid)
 
         await sio.emit("response_complete", {
-            "next_node_id": pipeline_result["next_node_id"],
+            "next_node_id": chatsession.current_node_id,
+            "possible_next_nodes": chatsession.possible_next_nodes,
             "retrieved_chunks": pipeline_result["retrieved_chunks"]
         }, to=sid)
 

@@ -9,19 +9,19 @@
   },
   {
     "path": "backend/main.py",
-    "tokens": 1293,
+    "tokens": 1718,
     "ignoreTokens": false,
-    "lines": 186,
-    "mtime": 1781108687.2378905,
-    "hash": "f5f120b35b83d6b3076eb44f260fe60bb58551d8"
+    "lines": 232,
+    "mtime": 1781166850.594143,
+    "hash": "b87c8b0b298f77d35d90ce2f755566df7290d29d"
   },
   {
     "path": "frontend/src/App.vue",
-    "tokens": 824,
+    "tokens": 2150,
     "ignoreTokens": false,
-    "lines": 143,
-    "mtime": 1781033245.647907,
-    "hash": "5e1da33f1012630cd292a8c016b0684d33429324"
+    "lines": 351,
+    "mtime": 1781166850.843593,
+    "hash": "cdbfb695c84ec048e6e7f5c9c10d32cf207b6ada"
   },
   {
     "path": "frontend/src/main.js",
@@ -118,5 +118,26 @@
     "lines": 16,
     "mtime": 1781104343.2276664,
     "hash": "e774dbd360523ba1fba875067039a412743b171c"
+  },
+  {
+    "path": "backend/scripts/core/session_manager.py",
+    "tokens": 228,
+    "lines": 31,
+    "mtime": 1781166850.1377332,
+    "hash": "24d5fdfb13c8da0953631f6ea82d77eaf02f31ba"
+  },
+  {
+    "path": "backend/scripts/core/orchestrator.py",
+    "tokens": 1130,
+    "lines": 142,
+    "mtime": 1781166850.462837,
+    "hash": "48093dd628d0ab4ca9c5c6c12f8f8d591d9b8a2e"
+  },
+  {
+    "path": "backend/scripts/core/chatsession.py",
+    "tokens": 867,
+    "lines": 105,
+    "mtime": 1781166850.253157,
+    "hash": "9495116e6eedb77b10c9e13cf579ebb1f1aae12d"
   }
 ]

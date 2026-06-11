@@ -14,6 +14,9 @@ def assemble_system_prompt(
     active_node_config: dict,
     rag_context_text: str = ""
 ) -> str:
+    """
+        Assemble the system prompt by combinting different properties in one string
+    """
     system_prompt = f"{base_prompt}\n\n"
 
     if dos:
@@ -59,12 +62,10 @@ def assemble_system_prompt(
 
     return system_prompt
 
-def run_dialogue_pipeline(
-    user_input: str,
-    active_node_id: str,
-    history: List[Dict[str, str]],
-    character_config: dict
-) -> Dict[str, Any]:
+def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Dict[str, str]], character_config: dict) -> Dict[str, Any]:
+    """
+        get character data, find current node, retrieve relevant information, generate response
+    """
     info = character_config.get("info", {})
     prompts = character_config.get("prompts", {})
     layout = character_config.get("layout", {})
@@ -75,7 +76,7 @@ def run_dialogue_pipeline(
     context = prompts.get("context", {})
     var_prompt = prompts.get("var_prompt", [])
 
-    next_node_id, active_node_config = traverse_fsm(
+    next_node_id, active_node_config, possible_next_nodes = traverse_fsm(
         user_input=user_input,
         active_node_id=active_node_id,
         layout=layout,
@@ -89,11 +90,15 @@ def run_dialogue_pipeline(
     rag_context_text = ""
 
     rag_settings = info.get("rag", {})
+    print(rag_settings)
     rag_scheme = rag_settings.get("ragScheme")
+    print(rag_scheme)
 
     ext_info = active_node_config.get("ext_info", "disabled")
+    print(ext_info)
 
     if rag_scheme and ext_info == "fetch":
+        print('do rag')
         search_query = rewrite_query(user_input, history)
         logger.info(f"[Orchestrator] Rewritten search query: {search_query}")
 
@@ -130,6 +135,7 @@ def run_dialogue_pipeline(
 
     return {
         "next_node_id": next_node_id,
+        "possible_next_nodes": possible_next_nodes,
         "response_stream": response_stream,
         "retrieved_chunks": retrieved_chunks,
         "metadata_categories": metadata_categories
