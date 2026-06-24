@@ -2,9 +2,7 @@ import os
 import subprocess
 import threading
 import numpy as np
-import logging
-
-logger = logging.getLogger(__name__)
+from scripts.utils.logger import PipelineLogger
 
 _whisper_pipeline = None
 _whisper_loading = False
@@ -20,21 +18,21 @@ def load_whisper_async():
     def target():
         global _whisper_pipeline, _whisper_loading
         try:
-            logger.info("[STT] Lazy-loading Whisper pipeline...")
+            PipelineLogger.info("Lazy-loading Whisper pipeline...")
             from transformers import pipeline
             import torch
 
             device = "cuda" if torch.cuda.is_available() else "cpu"
-            logger.info(f"[STT] Whisper loading on device: {device}")
+            PipelineLogger.info(f"Whisper loading on device: {device}")
             # Loading whisper-tiny for low-resource environments
             _whisper_pipeline = pipeline(
                 "automatic-speech-recognition",
                 model="openai/whisper-tiny",
                 device=device
             )
-            logger.info("[STT] Whisper pipeline loaded successfully.")
+            PipelineLogger.info("Whisper pipeline loaded successfully.")
         except Exception as e:
-            logger.error(f"[STT] Failed to load Whisper pipeline: {e}. STT will fall back to simulation or API.")
+            PipelineLogger.error(f"Failed to load Whisper pipeline: {e}. STT will fall back to simulation or API.")
         finally:
             _whisper_loading = False
 
@@ -67,24 +65,26 @@ def decode_audio_to_float32(audio_bytes: bytes) -> np.ndarray:
         )
         out, err = process.communicate(input=audio_bytes)
         if process.returncode != 0:
-            logger.error(f"[STT] ffmpeg error: {err.decode('utf-8', errors='ignore')}")
+            PipelineLogger.error(f"ffmpeg error: {err.decode('utf-8', errors='ignore')}")
             raise RuntimeError("ffmpeg conversion failed")
 
         return np.frombuffer(out, dtype=np.float32)
     except Exception as e:
-        logger.error(f"[STT] Audio decoding failed: {e}")
+        PipelineLogger.error(f"Audio decoding failed: {e}")
         raise e
 
 def transcribe_audio(audio_bytes: bytes) -> str:
     pipeline_instance = get_whisper_pipeline()
     if pipeline_instance is None:
-        logger.warning("[STT] Local Whisper not ready. Attempting API transcription or fallback.")
+        PipelineLogger.info("Local Whisper not ready. Attempting API transcription or fallback.")
         return "Simulated transcription: local Whisper not ready."
 
     try:
         audio_data = decode_audio_to_float32(audio_bytes)
         result = pipeline_instance({"raw": audio_data, "sampling_rate": 16000})
-        return result.get("text", "").strip()
+        transcription_text = result.get("text", "").strip()
+        PipelineLogger.transcription(transcription_text)
+        return transcription_text
     except Exception as e:
-        logger.error(f"[STT] Transcription failed: {e}")
+        PipelineLogger.error(f"Transcription failed: {e}")
         return ""

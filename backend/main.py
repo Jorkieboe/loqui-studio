@@ -16,9 +16,7 @@ from scripts.services.transcription_service import transcribe_audio, load_whispe
 from scripts.services.tts_service import stream_tts
 from scripts.core.orchestrator import run_dialogue_pipeline
 from scripts.core.session_manager import SessionManager
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("main")
+from scripts.utils.logger import PipelineLogger
 
 session_manager = SessionManager()
 
@@ -56,14 +54,14 @@ async def get_config():
 
 @sio.event
 async def connect(sid, environ):
-    logger.info(f"Client connected: {sid}")
+    PipelineLogger.info(f"Client connected: {sid}")
     session_manager.create_session(sid)
     load_whisper_async()
     await sio.emit("status_update", {"whisper_ready": True}, to=sid)
 
 @sio.event
 async def disconnect(sid):
-    logger.info(f"Client disconnected: {sid}")
+    PipelineLogger.info(f"Client disconnected: {sid}")
     session_manager.remove_session(sid)
 
 @sio.event
@@ -137,7 +135,7 @@ async def chat_message(sid, data):
         }, to=sid)
 
     except Exception as e:
-        logger.error(f"Error in chat_message socket event: {e}")
+        PipelineLogger.error("Error in chat_message socket event", e)
         await sio.emit("error", {"detail": str(e)}, to=sid)
 
 @sio.event
@@ -166,15 +164,14 @@ async def audio_message(sid, data):
         elif isinstance(data, bytes):
             audio_bytes = data
         else:
-            logger.error(f"Unsupported audio_message data format: {type(data)}")
+            PipelineLogger.error(f"Unsupported audio_message data format: {type(data)}")
             return
 
         if not audio_bytes:
-            logger.warning("Empty audio received in audio_message")
+            PipelineLogger.info("Empty audio received in audio_message")
             return
 
         transcription = transcribe_audio(audio_bytes)
-        logger.info(f"[STT] Transcribed: '{transcription}'")
 
         await sio.emit("transcription", {"text": transcription}, to=sid)
 
@@ -236,7 +233,7 @@ async def audio_message(sid, data):
         }, to=sid)
 
     except Exception as e:
-        logger.error(f"Error in audio_message socket event: {e}")
+        PipelineLogger.error("Error in audio_message socket event", e)
         await sio.emit("error", {"detail": str(e)}, to=sid)
 
 # Mount Vue production build files if they exist

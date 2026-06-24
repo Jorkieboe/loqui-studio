@@ -38,6 +38,7 @@
     "backend/scripts/services/tts_service.py",
     "backend/scripts/test_draft_endpoint.py",
     "backend/scripts/test_orchestration.py",
+    "backend/scripts/utils/logger.py",
     "concept.md",
     "frontend/index.html",
     "frontend/jsconfig.json",
@@ -66,7 +67,8 @@
     "backend/assets/rag_schemes/industrial/db_metadata.json",
     "backend/assets/rag_schemes/industrial/info.json",
     "backend/scripts/core/session_manager.py",
-    "backend/scripts/services/ollama_service.py"
+    "backend/scripts/services/ollama_service.py",
+    "backend/scripts/utils/logger.py"
   ],
-  "total_tokens": 35435
+  "total_tokens": 35390
 }

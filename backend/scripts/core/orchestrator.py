@@ -1,10 +1,8 @@
-import logging
 from typing import Dict, Any, List
 from scripts.core.chatsession import traverse_fsm
 from scripts.services.rag_service import retrieve_hybrid, extract_metadata_categories, rewrite_query
 from scripts.services.llm_service import api_request
-
-logger = logging.getLogger(__name__)
+from scripts.utils.logger import PipelineLogger
 
 def assemble_system_prompt(
     base_prompt: str,
@@ -91,17 +89,14 @@ def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Di
     rag_context_text = ""
 
     rag_settings = info.get("rag", {})
-    print(rag_settings)
     rag_scheme = rag_settings.get("ragScheme")
-    print(rag_scheme)
-
     ext_info = active_node_config.get("ext_info", "disabled")
-    print(ext_info)
+    PipelineLogger.llm_status(f"Pipeline Active Node: {active_node_id}, ext_info: {ext_info}, rag_scheme: {rag_scheme}")
 
     if rag_scheme and ext_info == "fetch":
-        print('do rag')
+        PipelineLogger.rag("Executing Retrieval-Augmented Generation (RAG)")
         search_query = rewrite_query(user_input, history)
-        logger.info(f"[Orchestrator] Rewritten search query: {search_query}")
+        PipelineLogger.rag(f"Rewritten search query: '{search_query}'")
 
         pov = rag_settings.get("pov", "all")
         chunksize = rag_settings.get("chunksize", 4)
@@ -115,8 +110,10 @@ def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Di
                 else:
                     text_val = str(chunk)
                 rag_context_text += f"- {text_val}\n"
+                PipelineLogger.rag(f"Retrieved chunk [{chunk.get('id', 'N/A')}]: {text_val[:60]}...")
 
             metadata_categories = extract_metadata_categories(retrieved_chunks)
+            PipelineLogger.rag(f"Metadata categories: {metadata_categories}")
 
     system_prompt = assemble_system_prompt(
         base_prompt=base_prompt,
@@ -125,8 +122,6 @@ def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Di
         context=context,
         active_node_config=active_node_config
     )
-
-    print(rag_context_text)
 
     api_messages = [{"role": "system", "content": system_prompt}]
     for turn in history:
@@ -142,8 +137,8 @@ def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Di
     f"Retrieved historical context info:\n{rag_context_text}\n\n"
         if rag_context_text else ""
     }
-    Instructions: Review your previous responses in the dialogue history to ensure you do not repeat facts, phrases, or sentence structures you have already used. 
-    Avoid repeating yourself. Additionally, think carefully about whether your character would realistically know the retrieved historical information or the details being asked based on their setting and background. 
+    Instructions: Review your previous responses in the dialogue history to ensure you do not repeat facts, phrases, or sentence structures you have already used.
+    Avoid repeating yourself. Additionally, think carefully about whether your character would realistically know the retrieved historical information or the details being asked based on their setting and background.
     Do not speak of things outside your character's realistic perspective. If it is beyond their knowledge, deflect or state your ignorance naturally while staying strictly in character.
 
     User message: {user_input}"""

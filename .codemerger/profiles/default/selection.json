@@ -43,10 +43,10 @@
   },
   {
     "path": "requirements.txt",
-    "tokens": 152,
-    "lines": 16,
-    "mtime": 1781104343.2276664,
-    "hash": "e774dbd360523ba1fba875067039a412743b171c"
+    "tokens": 160,
+    "lines": 17,
+    "mtime": 1782314558.2902353,
+    "hash": "d4a870e050234cade86823b59d5f1e1b4cdc892c"
   },
   {
     "path": "backend/config.json",
@@ -57,10 +57,10 @@
   },
   {
     "path": "backend/main.py",
-    "tokens": 1904,
-    "lines": 252,
-    "mtime": 1781169463.1045356,
-    "hash": "fcb7b90da59e149d6bdca78cad84a46796e9d714"
+    "tokens": 1885,
+    "lines": 249,
+    "mtime": 1782314558.4157388,
+    "hash": "2cbe537e0340a922ae495424052c181b8ecd0225"
   },
   {
     "path": "frontend/vite.config.mjs",
@@ -114,17 +114,17 @@
   },
   {
     "path": "backend/scripts/services/llm_service.py",
-    "tokens": 1676,
-    "lines": 174,
-    "mtime": 1782313358.7199273,
-    "hash": "fe6916c1d06d2a3a994685769aec4f207fc79e18"
+    "tokens": 1613,
+    "lines": 170,
+    "mtime": 1782314558.8525038,
+    "hash": "162e68ee6e8c563a25b86cc91bd16d6bddf8a22c"
   },
   {
     "path": "backend/scripts/services/rag_service.py",
-    "tokens": 4190,
-    "lines": 389,
-    "mtime": 1782312940.7346163,
-    "hash": "ace071e38b6c22d33fbcec032280b9b3f5cdd0f3"
+    "tokens": 4186,
+    "lines": 392,
+    "mtime": 1782314558.639913,
+    "hash": "76634408fdf3b4f344d9addb8aa5803bb0eeef0c"
   },
   {
     "path": "backend/scripts/core/chatsession.py",
@@ -135,10 +135,10 @@
   },
   {
     "path": "backend/scripts/core/orchestrator.py",
-    "tokens": 1337,
-    "lines": 165,
-    "mtime": 1781466413.6349306,
-    "hash": "e9ca02fe92f3bbc60351991e97933600ea0b5c93"
+    "tokens": 1370,
+    "lines": 156,
+    "mtime": 1782314558.5227797,
+    "hash": "c7d37729836e50796dff022677bbdd52fa13df66"
   },
   {
     "path": "backend/scripts/test_orchestration.py",
@@ -158,8 +158,8 @@
     "path": "backend/scripts/services/transcription_service.py",
     "tokens": 644,
     "lines": 90,
-    "mtime": 1781104343.0384722,
-    "hash": "9e783baa8f875061b5f7a07df90da6000d64981a"
+    "mtime": 1782314558.7331302,
+    "hash": "ae192f097c9aa4b703beee034103672e12e685f1"
   },
   {
     "path": "backend/scripts/services/tts_service.py",

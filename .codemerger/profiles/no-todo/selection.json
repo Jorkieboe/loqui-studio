@@ -9,11 +9,11 @@
   },
   {
     "path": "backend/main.py",
-    "tokens": 1904,
+    "tokens": 1885,
     "ignoreTokens": false,
-    "lines": 252,
-    "mtime": 1781169463.1045356,
-    "hash": "fcb7b90da59e149d6bdca78cad84a46796e9d714"
+    "lines": 249,
+    "mtime": 1782314558.4157388,
+    "hash": "2cbe537e0340a922ae495424052c181b8ecd0225"
   },
   {
     "path": "frontend/src/App.vue",
@@ -113,11 +113,11 @@
   },
   {
     "path": "requirements.txt",
-    "tokens": 152,
+    "tokens": 160,
     "ignoreTokens": false,
-    "lines": 16,
-    "mtime": 1781104343.2276664,
-    "hash": "e774dbd360523ba1fba875067039a412743b171c"
+    "lines": 17,
+    "mtime": 1782314558.2902353,
+    "hash": "d4a870e050234cade86823b59d5f1e1b4cdc892c"
   },
   {
     "path": "backend/scripts/core/session_manager.py",
@@ -128,10 +128,10 @@
   },
   {
     "path": "backend/scripts/core/orchestrator.py",
-    "tokens": 1337,
-    "lines": 165,
-    "mtime": 1781466413.6349306,
-    "hash": "e9ca02fe92f3bbc60351991e97933600ea0b5c93"
+    "tokens": 1370,
+    "lines": 156,
+    "mtime": 1782314558.5227797,
+    "hash": "c7d37729836e50796dff022677bbdd52fa13df66"
   },
   {
     "path": "backend/scripts/core/chatsession.py",
@@ -201,8 +201,8 @@
     "tokens": 644,
     "ignoreTokens": false,
     "lines": 90,
-    "mtime": 1781104343.0384722,
-    "hash": "9e783baa8f875061b5f7a07df90da6000d64981a"
+    "mtime": 1782314558.7331302,
+    "hash": "ae192f097c9aa4b703beee034103672e12e685f1"
   },
   {
     "path": "backend/scripts/services/tts_service.py",
@@ -214,19 +214,19 @@
   },
   {
     "path": "backend/scripts/services/rag_service.py",
-    "tokens": 4190,
+    "tokens": 4186,
     "ignoreTokens": false,
-    "lines": 389,
-    "mtime": 1782312940.7346163,
-    "hash": "ace071e38b6c22d33fbcec032280b9b3f5cdd0f3"
+    "lines": 392,
+    "mtime": 1782314558.639913,
+    "hash": "76634408fdf3b4f344d9addb8aa5803bb0eeef0c"
   },
   {
     "path": "backend/scripts/services/llm_service.py",
-    "tokens": 1676,
+    "tokens": 1613,
     "ignoreTokens": false,
-    "lines": 174,
-    "mtime": 1782313358.7199273,
-    "hash": "fe6916c1d06d2a3a994685769aec4f207fc79e18"
+    "lines": 170,
+    "mtime": 1782314558.8525038,
+    "hash": "162e68ee6e8c563a25b86cc91bd16d6bddf8a22c"
   },
   {
     "path": "backend/scripts/services/ollama_service.py",
@@ -242,5 +242,12 @@
     "lines": 35,
     "mtime": 1781459897.7309017,
     "hash": "53c7c9f478a0e2a58234b4a11e8acd4266f94294"
+  },
+  {
+    "path": "backend/scripts/utils/logger.py",
+    "tokens": 388,
+    "lines": 52,
+    "mtime": 1782314558.1877787,
+    "hash": "9e8efca5ec4eb7cee111763a4dd6085174854574"
   }
 ]

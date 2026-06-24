@@ -122,8 +122,9 @@ class RAGIndex:
 
     def load_index(self):
         metadata_path = os.path.join(self.scheme_dir, "db_metadata.json")
+        from scripts.utils.logger import PipelineLogger
         if not os.path.exists(metadata_path):
-            logger.warning(f"[RAG] Metadata file not found at: {metadata_path}")
+            PipelineLogger.rag(f"Metadata file not found at: {metadata_path}")
             return
         try:
             self.last_loaded_time = os.path.getmtime(metadata_path)
@@ -156,19 +157,19 @@ class RAGIndex:
                     if "metadata" not in chunk:
                         chunk["metadata"] = {}
                     self.chunks.append(chunk)
-            logger.info(f"[RAG] Successfully loaded {len(self.chunks)} chunks for scheme '{self.scheme_id}'.")
+            PipelineLogger.rag(f"Successfully loaded {len(self.chunks)} chunks for scheme '{self.scheme_id}'.")
         except Exception as e:
-            logger.error(f"Failed to load RAG metadata for {self.scheme_id}: {e}")
+            PipelineLogger.error(f"Failed to load RAG metadata for {self.scheme_id}", e)
             return
         if not self.chunks:
-            logger.warning(f"[RAG] No chunks found in metadata for scheme '{self.scheme_id}'.")
+            PipelineLogger.rag(f"No chunks found in metadata for scheme '{self.scheme_id}'.")
             return
         try:
             tokenized_corpus = [chunk["text"].lower().split() for chunk in self.chunks]
             self.bm25 = BM25Okapi(tokenized_corpus)
-            logger.info(f"[RAG] BM25 initialized successfully for scheme '{self.scheme_id}'.")
+            PipelineLogger.rag(f"BM25 initialized successfully for scheme '{self.scheme_id}'.")
         except Exception as e:
-            logger.error(f"Failed to initialize BM25: {e}")
+            PipelineLogger.error("Failed to initialize BM25", e)
         try:
             import faiss
             db_faiss_path = os.path.join(self.scheme_dir, "db.faiss")
@@ -179,10 +180,10 @@ class RAGIndex:
             elif os.path.exists(alt_faiss_path):
                 resolved_path = alt_faiss_path
             if resolved_path:
-                logger.info(f"[RAG] Loading existing FAISS index from: {resolved_path}")
+                PipelineLogger.rag(f"Loading existing FAISS index from: {resolved_path}")
                 self.faiss_index = faiss.read_index(resolved_path)
             else:
-                logger.warning(f"[RAG] FAISS database file not found. Generating a new one in-memory...")
+                PipelineLogger.rag("FAISS database file not found. Generating a new one in-memory...")
                 embeddings = []
                 for chunk in self.chunks:
                     text_val = chunk.get("text", "")
@@ -201,37 +202,39 @@ class RAGIndex:
 
                     try:
                         faiss.write_index(self.faiss_index, db_faiss_path)
-                        logger.info(f"[RAG] Successfully created and saved FAISS index of dimension {dimension} to {db_faiss_path}")
+                        PipelineLogger.rag(f"Successfully created and saved FAISS index of dimension {dimension} to {db_faiss_path}")
                     except Exception as save_err:
-                        logger.error(f"[RAG] Failed to save generated FAISS index to disk: {save_err}")
+                        PipelineLogger.error("Failed to save generated FAISS index to disk", save_err)
         except Exception as e:
-            logger.error(f"Failed to initialize FAISS index: {e}")
+            PipelineLogger.error("Failed to initialize FAISS index", e)
 
     def check_and_reload(self):
         metadata_path = os.path.join(self.scheme_dir, "db_metadata.json")
+        from scripts.utils.logger import PipelineLogger
         if os.path.exists(metadata_path):
             try:
                 mtime = os.path.getmtime(metadata_path)
                 if mtime > self.last_loaded_time:
-                    logger.info(f"[RAG] Detected changes in db_metadata.json for scheme '{self.scheme_id}'. Reloading...")
+                    PipelineLogger.rag(f"Detected changes in db_metadata.json for scheme '{self.scheme_id}'. Reloading...")
                     self.load_index()
             except Exception as e:
-                logger.warning(f"[RAG] Failed to check mtime for {self.scheme_id}: {e}")
+                PipelineLogger.rag(f"Failed to check mtime for {self.scheme_id}: {e}")
 
 _index_cache = {}
 
 def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: int = 4) -> List[Dict[str, Any]]:
     global _index_cache
-    logger.info(f"[RAG] Initiating hybrid retrieval. Query: '{query}', Scheme: '{scheme_id}', POV Filter: '{pov_filter}', Top K: {top_k}")
+    from scripts.utils.logger import PipelineLogger
+    PipelineLogger.rag(f"Initiating hybrid retrieval. Query: '{query}', Scheme: '{scheme_id}', POV Filter: '{pov_filter}', Top K: {top_k}")
     if scheme_id not in _index_cache:
-        logger.info(f"[RAG] Scheme '{scheme_id}' not found in cache. Initializing...")
+        PipelineLogger.rag(f"Scheme '{scheme_id}' not found in cache. Initializing...")
         _index_cache[scheme_id] = RAGIndex(scheme_id)
     else:
         _index_cache[scheme_id].check_and_reload()
 
     index = _index_cache[scheme_id]
     if not index.chunks:
-        logger.warning(f"[RAG] No chunks loaded for scheme '{scheme_id}'. Returning empty results.")
+        PipelineLogger.rag(f"No chunks loaded for scheme '{scheme_id}'. Returning empty results.")
         return []
 
     faiss_hits = []
@@ -240,8 +243,8 @@ def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: 
             q_emb = get_embedding(query)
             q_emb_arr = np.array([q_emb], dtype=np.float32)
             if q_emb_arr.shape[1] != index.faiss_index.d:
-                logger.warning(
-                    f"[RAG] Dimension mismatch: Query vector has {q_emb_arr.shape[1]} dims, "
+                PipelineLogger.rag(
+                    f"Dimension mismatch: Query vector has {q_emb_arr.shape[1]} dims, "
                     f"but FAISS index expects {index.faiss_index.d} dims. Skipping FAISS search."
                 )
             else:
@@ -249,14 +252,14 @@ def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: 
                 if q_norm > 0:
                     q_emb_arr = q_emb_arr / q_norm
                 scores, indices = index.faiss_index.search(q_emb_arr, len(index.chunks))
-                logger.info(f"[RAG] FAISS dense search completed. Best index match: {indices[0][0]} with score {scores[0][0]}")
+                PipelineLogger.rag(f"FAISS dense search completed. Best index match index: {indices[0][0]} with score {scores[0][0]}")
                 for score, idx in zip(scores[0], indices[0]):
                     if idx != -1 and idx < len(index.chunks):
                         faiss_hits.append(index.chunks[idx])
         except Exception as e:
-            logger.error(f"[RAG] FAISS dense retrieval failed: {e}")
+            PipelineLogger.error(f"FAISS dense retrieval failed: {e}")
     else:
-        logger.warning(f"[RAG] FAISS index not initialized for scheme '{scheme_id}'. Skipping dense retrieval.")
+        PipelineLogger.rag(f"FAISS index not initialized for scheme '{scheme_id}'. Skipping dense retrieval.")
 
     bm25_hits = []
     if index.bm25:
@@ -266,15 +269,15 @@ def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: 
                 filtered_tokens = query.lower().split()
             scores = index.bm25.get_scores(filtered_tokens)
             ranked_indices = np.argsort(scores)[::-1]
-            logger.info(f"[RAG] BM25 sparse search completed. Tokenized query: {filtered_tokens}")
+            PipelineLogger.rag(f"BM25 sparse search completed. Tokenized query: {filtered_tokens}")
             for idx in ranked_indices:
                 if scores[idx] > 0 and idx < len(index.chunks):
                     bm25_hits.append(index.chunks[idx])
-            logger.info(f"[RAG] BM25 found {len(bm25_hits)} matching sparse chunks.")
+            PipelineLogger.rag(f"BM25 found {len(bm25_hits)} matching sparse chunks.")
         except Exception as e:
-            logger.error(f"[RAG] BM25 sparse retrieval failed: {e}")
+            PipelineLogger.error(f"BM25 sparse retrieval failed: {e}")
     else:
-        logger.warning(f"[RAG] BM25 index not initialized for scheme '{scheme_id}'. Skipping sparse retrieval.")
+        PipelineLogger.rag(f"BM25 index not initialized for scheme '{scheme_id}'. Skipping sparse retrieval.")
 
     candidate_hits = []
     seen_ids = set()
@@ -299,7 +302,7 @@ def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: 
             else:
                 non_matching.append(chunk)
         pov_hits = matching + non_matching
-        logger.info(f"[RAG] POV Filtering applied: {len(matching)} matching vs {len(non_matching)} non-matching out of {len(candidate_hits)} total candidates.")
+        PipelineLogger.rag(f"POV Filtering applied: {len(matching)} matching vs {len(non_matching)} non-matching out of {len(candidate_hits)} total candidates.")
 
     rrf_scores = {}
     def add_to_rrf(ranking_list):
@@ -316,7 +319,7 @@ def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: 
     add_to_rrf(pov_hits)
 
     sorted_rrf = sorted(rrf_scores.values(), key=lambda x: x["score"], reverse=True)
-    logger.info(f"[RAG] Reciprocal Rank Fusion computed for {len(rrf_scores)} unique chunks.")
+    PipelineLogger.rag(f"Reciprocal Rank Fusion computed for {len(rrf_scores)} unique chunks.")
 
     results = []
     for item in sorted_rrf[:top_k]:
@@ -331,7 +334,7 @@ def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: 
         elif isinstance(chunk, dict):
             results.append(chunk)
 
-    logger.info(f"[RAG] Final retrieved chunks (Top {len(results)}): {[c.get('id') for c in results]}")
+    PipelineLogger.rag(f"Final retrieved chunks (Top {len(results)}): {[c.get('id') for c in results]}")
     return results
 
 def extract_metadata_categories(chunks: List[Dict[str, Any]]) -> Dict[str, List[str]]:
