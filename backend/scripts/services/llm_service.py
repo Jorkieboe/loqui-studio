@@ -52,14 +52,19 @@ def api_request(
     input_tokens = count_tokens(input_text, preset.get("model", "gpt-4o-mini"))
     logger.info(f"[LLM] Input tokens: {input_tokens}")
 
-    from scripts.services.ollama_service import is_ollama_available, ollama_chat_request, load_ollama_config
+    from scripts.services.ollama_service import is_ollama_available, load_ollama_config
     ollama_cfg = load_ollama_config()
     ollama_active = ollama_cfg.get("enabled", True) and is_ollama_available()
-    if not api_key:
-        if ollama_active:
-            llm_model = ollama_cfg.get("llm_model", "llama3")
-            logger.info(f"[LLM] Routing request to Ollama model: {llm_model}")
-            return ollama_chat_request(messages, llm_model, stream=stream)
+
+    base_url = None
+    model_name = preset.get("model", "gpt-4o-mini")
+
+    if ollama_active:
+        host = ollama_cfg.get("host", "http://127.0.0.1:11434").rstrip("/")
+        base_url = f"{host}/v1"
+        model_name = ollama_cfg.get("llm_model", "llama3")
+        api_key = "ollama"
+    elif not api_key:
         logger.warning("[LLM] OPENAI_API_KEY not found in environment and Ollama is not available. Using fallback simulator.")
         def mock_generator():
             fallback_response = (
@@ -70,10 +75,11 @@ def api_request(
                 yield word + " "
         return mock_generator() if stream else "Simulated response: OpenAI API Key not configured."
 
-    client = OpenAI(api_key=api_key)
+    logger.info(f"[LLM] Routing request to model: {model_name}")
+    client = OpenAI(api_key=api_key, base_url=base_url)
 
     kwargs = {
-        "model": preset.get("model", "gpt-4o-mini"),
+        "model": model_name,
         "messages": messages,
         "temperature": preset.get("temperature", 0.7),
         "max_tokens": preset.get("max_tokens", 150),
@@ -99,5 +105,5 @@ def api_request(
             response = client.chat.completions.create(**kwargs)
             return response.choices[0].message.content
     except Exception as e:
-        logger.error(f"[LLM] OpenAI API Request failed: {e}")
+        logger.error(f"[LLM] API Request failed: {e}")
         raise e

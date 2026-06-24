@@ -214,26 +214,26 @@
   },
   {
     "path": "backend/scripts/services/rag_service.py",
-    "tokens": 4124,
+    "tokens": 4189,
     "ignoreTokens": false,
-    "lines": 379,
-    "mtime": 1781461647.0720863,
-    "hash": "6fb6ec2a11924533896f6a6e442b91a3460ba7fd"
+    "lines": 389,
+    "mtime": 1782308281.9410925,
+    "hash": "98495ef89dec5ed7cfc992eec682858332ad17b8"
   },
   {
     "path": "backend/scripts/services/llm_service.py",
-    "tokens": 922,
+    "tokens": 957,
     "ignoreTokens": false,
-    "lines": 103,
-    "mtime": 1781181741.1499665,
-    "hash": "e7eebffee0cfd23fc664a3bb88f1097cfdfafbcb"
+    "lines": 109,
+    "mtime": 1782308281.8435142,
+    "hash": "fd65facff973c3bed9f7dd418e585a40d3de1b1e"
   },
   {
     "path": "backend/scripts/services/ollama_service.py",
-    "tokens": 2035,
-    "lines": 249,
-    "mtime": 1781181740.943648,
-    "hash": "7205c33127e3ac53df3afa3c9caf0432b99318b1"
+    "tokens": 1230,
+    "lines": 144,
+    "mtime": 1782308282.089952,
+    "hash": "0843b73ea18f40fda31bce4c3e7511a961e542c6"
   },
   {
     "path": "backend/assets/characters/werker/prompts.yaml",

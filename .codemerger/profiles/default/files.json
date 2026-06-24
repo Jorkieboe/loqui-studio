@@ -68,5 +68,5 @@
     "backend/scripts/core/session_manager.py",
     "backend/scripts/services/ollama_service.py"
   ],
-  "total_tokens": 34586
+  "total_tokens": 34686
 }

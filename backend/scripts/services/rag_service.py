@@ -75,21 +75,31 @@ def init_rag_schemes():
 init_rag_schemes()
 
 def get_embedding(text: str) -> List[float]:
-    from scripts.services.ollama_service import is_ollama_available, get_ollama_embedding, load_ollama_config
+    from scripts.services.ollama_service import is_ollama_available, load_ollama_config
     ollama_cfg = load_ollama_config()
-    if ollama_cfg.get("enabled", True) and is_ollama_available():
-        emb_model = ollama_cfg.get("embedding_model", "nomic-embed-text")
-        logger.info(f"[RAG] Using Ollama embedding model: {emb_model}")
-        return get_ollama_embedding(f"query: {text}", emb_model)
+    ollama_active = ollama_cfg.get("enabled", True) and is_ollama_available()
+
     api_key = os.environ.get("OPENAI_API_KEY")
+    base_url = None
+    model_name = "text-embedding-3-small"
+
+    if ollama_active:
+        host = ollama_cfg.get("host", "http://127.0.0.1:11434").rstrip("/")
+        base_url = f"{host}/v1"
+        model_name = ollama_cfg.get("embedding_model", "nomic-embed-text")
+        api_key = "ollama"
+
     if api_key:
         try:
             from openai import OpenAI
-            client = OpenAI(api_key=api_key)
-            res = client.embeddings.create(input=[f"query: {text}"], model="text-embedding-3-small")
+            client = OpenAI(api_key=api_key, base_url=base_url)
+            logger.info(f"[RAG] Using embedding model: {model_name}")
+            res = client.embeddings.create(input=[f"query: {text}"], model=model_name)
             return res.data[0].embedding
         except Exception as e:
-            logger.error(f"Failed to generate OpenAI embedding: {e}")
+            logger.error(f"Failed to generate embedding: {e}")
+
+    # Fallback simulation
     words = text.lower().split()
     vec = np.zeros(1536, dtype=np.float32)
     for i, w in enumerate(words):
