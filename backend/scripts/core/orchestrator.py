@@ -15,38 +15,39 @@ def assemble_system_prompt(
     rag_context_text: str = ""
 ) -> str:
     """
-        Assemble the system prompt by combinting different properties in one string
+    Assemble the system prompt by combining different properties in one string.
     """
     system_prompt = f"{base_prompt}\n\n"
 
     if dos:
-        system_prompt += "GUIDELINES (DO):\n"
+        system_prompt += "do's:\n"
         for item in dos:
             system_prompt += f"- {item}\n"
         system_prompt += "\n"
 
     if donts:
-        system_prompt += "GUIDELINES (DON'T):\n"
+        system_prompt += "dont's:\n"
         for item in donts:
             system_prompt += f"- {item}\n"
         system_prompt += "\n"
 
     if context:
-        system_prompt += "HISTORICAL CONTEXT:\n"
+        system_prompt += "Context:\n"
         for k, v in context.items():
             if v:
                 system_prompt += f"- {k.capitalize()}: {v}\n"
         system_prompt += "\n"
 
     if active_node_config:
-        system_prompt += "ACTIVE DIALOGUE STATE OBJECTIVES:\n"
+        system_prompt += "CURRENT GOAL (VAR PROMPT):\n"
+        system_prompt += "This represents your immediate objective in the conversation. You must direct your response toward satisfying this goal.\n"
         goal = active_node_config.get("goal")
         tone = active_node_config.get("tone")
         example = active_node_config.get("example")
         follow_up = active_node_config.get("follow_up")
 
         if goal:
-            system_prompt += f"- Current Goal: {goal}\n"
+            system_prompt += f"- Goal: {goal}\n"
         if tone:
             system_prompt += f"- Tone of voice: {tone}\n"
         if example:
@@ -54,11 +55,6 @@ def assemble_system_prompt(
         if follow_up:
             system_prompt += f"- Next follow up point to check: {follow_up}\n"
         system_prompt += "\n"
-
-    if rag_context_text:
-        system_prompt += "RETRIEVED FACTUAL HISTORICAL DATA (Grounded Guardrails):\n"
-        system_prompt += f"{rag_context_text}\n\n"
-        system_prompt += "Strict Instruction: Use the retrieved factual historical data to ground your answer and avoid hallucinations. If the info is not in the data, deflection is preferred rather than inventing modern details.\n\n"
 
     return system_prompt
 
@@ -102,39 +98,57 @@ def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Di
     ext_info = active_node_config.get("ext_info", "disabled")
     print(ext_info)
 
-    # if rag_scheme and ext_info == "fetch":
-    #     print('do rag')
-    #     search_query = rewrite_query(user_input, history)
-    #     logger.info(f"[Orchestrator] Rewritten search query: {search_query}")
+    if rag_scheme and ext_info == "fetch":
+        print('do rag')
+        search_query = rewrite_query(user_input, history)
+        logger.info(f"[Orchestrator] Rewritten search query: {search_query}")
 
-    #     pov = rag_settings.get("pov", "all")
-    #     chunksize = rag_settings.get("chunksize", 4)
-    #     retrieved_chunks = retrieve_hybrid(search_query, rag_scheme, pov, chunksize)
+        pov = rag_settings.get("pov", "all")
+        chunksize = rag_settings.get("chunksize", 4)
+        retrieved_chunks = retrieve_hybrid(search_query, rag_scheme, pov, chunksize)
 
-    #     if retrieved_chunks:
-    #         rag_context_text = "Retrieved Chunks:\n"
-    #         for chunk in retrieved_chunks:
-    #             rag_context_text += f"- {chunk['text']}\n"
+        if retrieved_chunks:
+            rag_context_text = "Retrieved Chunks:\n"
+            for chunk in retrieved_chunks:
+                if isinstance(chunk, dict):
+                    text_val = chunk.get("text", "")
+                else:
+                    text_val = str(chunk)
+                rag_context_text += f"- {text_val}\n"
 
-    #         metadata_categories = extract_metadata_categories(retrieved_chunks)
+            metadata_categories = extract_metadata_categories(retrieved_chunks)
 
     system_prompt = assemble_system_prompt(
         base_prompt=base_prompt,
         dos=dos,
         donts=donts,
         context=context,
-        active_node_config=active_node_config,
-        rag_context_text=rag_context_text
+        active_node_config=active_node_config
     )
+
+    print(rag_context_text)
 
     api_messages = [{"role": "system", "content": system_prompt}]
     for turn in history:
-        role = turn.get("role", "user")
-        text = turn.get("text", turn.get("content", ""))
-        if role in ["user", "assistant"]:
-            api_messages.append({"role": role, "content": text})
+        if isinstance(turn, str):
+            api_messages.append({"role": "user", "content": turn})
+        elif isinstance(turn, dict):
+            role = turn.get("role", "user")
+            text = turn.get("text", turn.get("content", ""))
+            if role in ["user", "assistant"]:
+                api_messages.append({"role": role, "content": text})
 
-    api_messages.append({"role": "user", "content": user_input})
+    user_payload = f"""{
+    f"Retrieved historical context info:\n{rag_context_text}\n\n"
+        if rag_context_text else ""
+    }
+    Instructions: Review your previous responses in the dialogue history to ensure you do not repeat facts, phrases, or sentence structures you have already used. 
+    Avoid repeating yourself. Additionally, think carefully about whether your character would realistically know the retrieved historical information or the details being asked based on their setting and background. 
+    Do not speak of things outside your character's realistic perspective. If it is beyond their knowledge, deflect or state your ignorance naturally while staying strictly in character.
+
+    User message: {user_input}"""
+
+    api_messages.append({"role": "user", "content": user_payload})
 
     response_stream = api_request(api_messages, stream=True)
 

@@ -49,7 +49,7 @@ The architecture avoids vendor lock-in. It maintains a consistent abstraction la
 The platform splits its features between an accessible voice-first interface and a flexible, developer-friendly creation suite:
 
 ### 1. Voice-Only Experience Mode (Museum View)
-- **Character Overview Interface:** An accessible dashboard displaying available historical figures, allowing users to select a character and start speaking immediately. This replaces the rigid carousel with a clean, flexible overview layout.
+- **Character Overview Interface:** An accessible dashboard displaying available historical figures, allowing users to select a character and start speaking immediately.
 - **Always-Accessible Voice Interface:** A dedicated voice-only pipeline that uses standard speech interaction (e.g., push-to-talk or continuous listening) to enable immediate, hands-free conversation.
 - **Ambient Audio Integration:** Subtle environmental soundscapes and real-time audio state indicators (idle, listening, processing, speaking) to guide visitors without relying heavily on screen text.
 

@@ -1,27 +1,27 @@
 [
   {
     "path": "backend/config.json",
-    "tokens": 106,
+    "tokens": 161,
     "ignoreTokens": false,
-    "lines": 15,
-    "mtime": 1781033245.2230594,
-    "hash": "ffd87e9382b7b82f42bd150540461323e4ed62fb"
+    "lines": 21,
+    "mtime": 1781181741.0505154,
+    "hash": "e25a79e5b0d8d1992c88e2a86b5d9e4137157d93"
   },
   {
     "path": "backend/main.py",
-    "tokens": 1718,
+    "tokens": 1904,
     "ignoreTokens": false,
-    "lines": 232,
-    "mtime": 1781166850.594143,
-    "hash": "b87c8b0b298f77d35d90ce2f755566df7290d29d"
+    "lines": 252,
+    "mtime": 1781169463.1045356,
+    "hash": "fcb7b90da59e149d6bdca78cad84a46796e9d714"
   },
   {
     "path": "frontend/src/App.vue",
-    "tokens": 2150,
+    "tokens": 2198,
     "ignoreTokens": false,
-    "lines": 351,
-    "mtime": 1781166850.843593,
-    "hash": "cdbfb695c84ec048e6e7f5c9c10d32cf207b6ada"
+    "lines": 357,
+    "mtime": 1781167560.9715981,
+    "hash": "ef43bb693bd87fafb6cd0d4a80584bd54a26dfb4"
   },
   {
     "path": "frontend/src/main.js",
@@ -121,23 +121,126 @@
   },
   {
     "path": "backend/scripts/core/session_manager.py",
-    "tokens": 228,
-    "lines": 31,
-    "mtime": 1781166850.1377332,
-    "hash": "24d5fdfb13c8da0953631f6ea82d77eaf02f31ba"
+    "tokens": 242,
+    "lines": 33,
+    "mtime": 1781169462.7720907,
+    "hash": "60175397d18f7d7ed3a5cfbea0a5752b8c679e06"
   },
   {
     "path": "backend/scripts/core/orchestrator.py",
-    "tokens": 1130,
-    "lines": 142,
-    "mtime": 1781166850.462837,
-    "hash": "48093dd628d0ab4ca9c5c6c12f8f8d591d9b8a2e"
+    "tokens": 1337,
+    "lines": 165,
+    "mtime": 1781466413.6349306,
+    "hash": "e9ca02fe92f3bbc60351991e97933600ea0b5c93"
   },
   {
     "path": "backend/scripts/core/chatsession.py",
-    "tokens": 867,
-    "lines": 105,
-    "mtime": 1781166850.253157,
-    "hash": "9495116e6eedb77b10c9e13cf579ebb1f1aae12d"
+    "tokens": 1941,
+    "lines": 219,
+    "mtime": 1781169462.8695993,
+    "hash": "085d18885403a95a55235002a2de94af58992cb7"
+  },
+  {
+    "path": "backend/assets/characters/example/layout.json",
+    "tokens": 200,
+    "ignoreTokens": false,
+    "lines": 38,
+    "mtime": 1781095508.3758726,
+    "hash": "8371570bf1284e27ef6177797c0c8bc55593a113"
+  },
+  {
+    "path": "backend/assets/characters/example/info.json",
+    "tokens": 115,
+    "ignoreTokens": false,
+    "lines": 18,
+    "mtime": 1781095508.3738563,
+    "hash": "73dd2abfa906e8df89f1bfcaff0a1d835e07169a"
+  },
+  {
+    "path": "backend/assets/characters/example/prompts.yaml",
+    "tokens": 207,
+    "ignoreTokens": false,
+    "lines": 30,
+    "mtime": 1781095508.3748655,
+    "hash": "f4bf9c3ed0afe7aa1a574cd557f283dd1f82493a"
+  },
+  {
+    "path": "backend/scripts/api/character.py",
+    "tokens": 3149,
+    "ignoreTokens": false,
+    "lines": 390,
+    "mtime": 1781104343.5187304,
+    "hash": "04f43ff3b1fbc0d190a8cd70561b9cf0b0a499bc"
+  },
+  {
+    "path": "backend/scripts/core/context.py",
+    "tokens": 128,
+    "ignoreTokens": false,
+    "lines": 16,
+    "mtime": 1781104342.9560342,
+    "hash": "0ec3917cad0532ee2c171c562b96237dfa2f364d"
+  },
+  {
+    "path": "backend/scripts/test_orchestration.py",
+    "tokens": 894,
+    "ignoreTokens": false,
+    "lines": 118,
+    "mtime": 1781104343.4262495,
+    "hash": "de5572667c722a1c9a3525a9176631e456aad6ed"
+  },
+  {
+    "path": "backend/scripts/test_draft_endpoint.py",
+    "tokens": 1094,
+    "ignoreTokens": false,
+    "lines": 140,
+    "mtime": 1781107073.3489819,
+    "hash": "1a4645b49c9ae1871b8f5f230d6e935356e58fa3"
+  },
+  {
+    "path": "backend/scripts/services/transcription_service.py",
+    "tokens": 644,
+    "ignoreTokens": false,
+    "lines": 90,
+    "mtime": 1781104343.0384722,
+    "hash": "9e783baa8f875061b5f7a07df90da6000d64981a"
+  },
+  {
+    "path": "backend/scripts/services/tts_service.py",
+    "tokens": 632,
+    "ignoreTokens": false,
+    "lines": 88,
+    "mtime": 1781104343.1248834,
+    "hash": "74e156933032b1123a4a8fa1daa7984c9f76a040"
+  },
+  {
+    "path": "backend/scripts/services/rag_service.py",
+    "tokens": 4124,
+    "ignoreTokens": false,
+    "lines": 379,
+    "mtime": 1781461647.0720863,
+    "hash": "6fb6ec2a11924533896f6a6e442b91a3460ba7fd"
+  },
+  {
+    "path": "backend/scripts/services/llm_service.py",
+    "tokens": 922,
+    "ignoreTokens": false,
+    "lines": 103,
+    "mtime": 1781181741.1499665,
+    "hash": "e7eebffee0cfd23fc664a3bb88f1097cfdfafbcb"
+  },
+  {
+    "path": "backend/scripts/services/ollama_service.py",
+    "tokens": 2035,
+    "lines": 249,
+    "mtime": 1781181740.943648,
+    "hash": "7205c33127e3ac53df3afa3c9caf0432b99318b1"
+  },
+  {
+    "path": "backend/assets/characters/werker/prompts.yaml",
+    "tokens": 709,
+    "ignoreTokens": false,
+    "lines": 35,
+    "mtime": 1781459897.7309017,
+    "hash": "53c7c9f478a0e2a58234b4a11e8acd4266f94294"
   }
 ]

@@ -50,17 +50,17 @@
   },
   {
     "path": "backend/config.json",
-    "tokens": 106,
-    "lines": 15,
-    "mtime": 1781033245.2230594,
-    "hash": "ffd87e9382b7b82f42bd150540461323e4ed62fb"
+    "tokens": 161,
+    "lines": 21,
+    "mtime": 1781181741.0505154,
+    "hash": "e25a79e5b0d8d1992c88e2a86b5d9e4137157d93"
   },
   {
     "path": "backend/main.py",
-    "tokens": 1718,
-    "lines": 232,
-    "mtime": 1781166850.594143,
-    "hash": "b87c8b0b298f77d35d90ce2f755566df7290d29d"
+    "tokens": 1904,
+    "lines": 252,
+    "mtime": 1781169463.1045356,
+    "hash": "fcb7b90da59e149d6bdca78cad84a46796e9d714"
   },
   {
     "path": "frontend/vite.config.mjs",
@@ -92,10 +92,10 @@
   },
   {
     "path": "frontend/src/App.vue",
-    "tokens": 2150,
-    "lines": 351,
-    "mtime": 1781166850.843593,
-    "hash": "cdbfb695c84ec048e6e7f5c9c10d32cf207b6ada"
+    "tokens": 2198,
+    "lines": 357,
+    "mtime": 1781167560.9715981,
+    "hash": "ef43bb693bd87fafb6cd0d4a80584bd54a26dfb4"
   },
   {
     "path": "package.json",
@@ -114,31 +114,31 @@
   },
   {
     "path": "backend/scripts/services/llm_service.py",
-    "tokens": 780,
-    "lines": 96,
-    "mtime": 1781104343.3059735,
-    "hash": "b4eec39dc25725a980605d1a496550f9fd5b7352"
+    "tokens": 922,
+    "lines": 103,
+    "mtime": 1781181741.1499665,
+    "hash": "e7eebffee0cfd23fc664a3bb88f1097cfdfafbcb"
   },
   {
     "path": "backend/scripts/services/rag_service.py",
-    "tokens": 2046,
-    "lines": 232,
-    "mtime": 1781097396.1716294,
-    "hash": "10cf045e1d976b05c93e663fa06e37cadbb11d84"
+    "tokens": 4124,
+    "lines": 379,
+    "mtime": 1781461647.0720863,
+    "hash": "6fb6ec2a11924533896f6a6e442b91a3460ba7fd"
   },
   {
     "path": "backend/scripts/core/chatsession.py",
-    "tokens": 867,
-    "lines": 105,
-    "mtime": 1781166850.253157,
-    "hash": "9495116e6eedb77b10c9e13cf579ebb1f1aae12d"
+    "tokens": 1941,
+    "lines": 219,
+    "mtime": 1781169462.8695993,
+    "hash": "085d18885403a95a55235002a2de94af58992cb7"
   },
   {
     "path": "backend/scripts/core/orchestrator.py",
-    "tokens": 1130,
-    "lines": 142,
-    "mtime": 1781166850.462837,
-    "hash": "48093dd628d0ab4ca9c5c6c12f8f8d591d9b8a2e"
+    "tokens": 1337,
+    "lines": 165,
+    "mtime": 1781466413.6349306,
+    "hash": "e9ca02fe92f3bbc60351991e97933600ea0b5c93"
   },
   {
     "path": "backend/scripts/test_orchestration.py",

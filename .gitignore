@@ -41,4 +41,9 @@ coverage
 
 *.tsbuildinfo
 
+backend/assets/characters/*
+!backend/assets/characters/example
+
+backend/assets/rag_schemes/*
+
 

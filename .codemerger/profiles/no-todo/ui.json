@@ -1,4 +1,20 @@
 {
   "name": "no todo",
-  "expanded_dirs": []
+  "expanded_dirs": [
+    "backend",
+    "backend/assets",
+    "backend/assets/characters",
+    "backend/assets/characters/example",
+    "backend/assets/characters/guillaume",
+    "backend/assets/characters/mock_character",
+    "backend/assets/characters/werker",
+    "backend/assets/rag_schemes",
+    "backend/assets/rag_schemes/gennep",
+    "backend/assets/rag_schemes/hussite_wars",
+    "backend/assets/rag_schemes/industrial",
+    "backend/scripts",
+    "backend/scripts/api",
+    "backend/scripts/core",
+    "backend/scripts/services"
+  ]
 }

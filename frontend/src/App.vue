@@ -97,7 +97,7 @@ export default {
       streamingText.value = '';
 
       socket.emit('chat_message', {
-        character_id: 'guillaume',
+        character_id: 'werker',
         text: userText,
         active_node_id: currentNodeId.value,
         history: chatHistory.value.slice(0, -1)
