@@ -14,6 +14,8 @@
   },
   "ollama": {
     "enabled": true,
+    "llm_enabled": false,
+    "embedding_enabled": true,
     "host": "http://127.0.0.1:11434",
     "llm_model": "batiai/gemma4-e2b:q4",
     "embedding_model": "qllama/multilingual-e5-base"

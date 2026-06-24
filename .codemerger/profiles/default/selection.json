@@ -50,10 +50,10 @@
   },
   {
     "path": "backend/config.json",
-    "tokens": 161,
-    "lines": 21,
-    "mtime": 1781181741.0505154,
-    "hash": "e25a79e5b0d8d1992c88e2a86b5d9e4137157d93"
+    "tokens": 190,
+    "lines": 23,
+    "mtime": 1782312940.4149785,
+    "hash": "432e728b7674e95ba910827a864df6491da6f4d7"
   },
   {
     "path": "backend/main.py",
@@ -114,17 +114,17 @@
   },
   {
     "path": "backend/scripts/services/llm_service.py",
-    "tokens": 957,
-    "lines": 109,
-    "mtime": 1782308281.8435142,
-    "hash": "fd65facff973c3bed9f7dd418e585a40d3de1b1e"
+    "tokens": 1676,
+    "lines": 174,
+    "mtime": 1782313358.7199273,
+    "hash": "fe6916c1d06d2a3a994685769aec4f207fc79e18"
   },
   {
     "path": "backend/scripts/services/rag_service.py",
-    "tokens": 4189,
+    "tokens": 4190,
     "lines": 389,
-    "mtime": 1782308281.9410925,
-    "hash": "98495ef89dec5ed7cfc992eec682858332ad17b8"
+    "mtime": 1782312940.7346163,
+    "hash": "ace071e38b6c22d33fbcec032280b9b3f5cdd0f3"
   },
   {
     "path": "backend/scripts/core/chatsession.py",

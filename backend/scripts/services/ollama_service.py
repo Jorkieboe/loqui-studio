@@ -117,7 +117,12 @@ def manage_models(target_models: List[str] = None):
     if not config.get("enabled", True):
         return
     if target_models is None:
-        target_models = [config.get("llm_model", "llama3"), config.get("embedding_model", "nomic-embed-text")]
+        models_to_preload = []
+        if config.get("llm_enabled", True):
+            models_to_preload.append(config.get("llm_model", "llama3"))
+        if config.get("embedding_enabled", True):
+            models_to_preload.append(config.get("embedding_model", "nomic-embed-text"))
+        target_models = models_to_preload
     target_models = list(set([m for m in target_models if m]))
     loaded = get_loaded_models()
     logger.info(f"[Ollama] Currently loaded: {loaded} targets: {target_models}")

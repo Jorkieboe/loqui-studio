@@ -77,7 +77,7 @@ init_rag_schemes()
 def get_embedding(text: str) -> List[float]:
     from scripts.services.ollama_service import is_ollama_available, load_ollama_config
     ollama_cfg = load_ollama_config()
-    ollama_active = ollama_cfg.get("enabled", True) and is_ollama_available()
+    ollama_active = ollama_cfg.get("embedding_enabled", True) and is_ollama_available()
 
     api_key = os.environ.get("OPENAI_API_KEY")
     base_url = None
