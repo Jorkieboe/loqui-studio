@@ -1,3 +1,104 @@
+<script setup>
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { io } from 'socket.io-client';
+
+const configData = ref(null);
+const loading = ref(true);
+const error = ref(null);
+const isConnected = ref(false);
+
+const socketConnected = ref(false);
+const chatHistory = ref([]);
+const inputMessage = ref('');
+const streamingText = ref('');
+const currentNodeId = ref('start');
+const possibleNextNodes = ref([]);
+let socket = null;
+
+const fetchConfig = async () => {
+  try {
+    const res = await fetch('/api/config');
+    if (!res.ok) {
+      throw new Error(`Failed to fetch: ${res.statusText}`);
+    }
+    configData.value = await res.json();
+    isConnected.value = true;
+  } catch (err) {
+    error.value = err.message;
+    isConnected.value = false;
+  } finally {
+    loading.value = false;
+  }
+};
+
+const sendMessage = () => {
+  if (!inputMessage.value.trim() || !socketConnected.value) return;
+
+  const userText = inputMessage.value.trim();
+  chatHistory.value.push({ role: 'user', text: userText });
+  inputMessage.value = '';
+  streamingText.value = '';
+
+  socket.emit('chat_message', {
+    character_id: 'werker',
+    text: userText,
+    active_node_id: currentNodeId.value,
+    history: chatHistory.value.slice(0, -1)
+  });
+};
+
+onMounted(() => {
+  fetchConfig();
+
+  socket = io({
+    transports: ['websocket', 'polling']
+  });
+
+  socket.on('connect', () => {
+    socketConnected.value = true;
+  });
+
+  socket.on('disconnect', () => {
+    socketConnected.value = false;
+  });
+
+  socket.on('response_chunk', (data) => {
+    if (data && data.text) {
+      streamingText.value += data.text;
+    }
+  });
+
+  socket.on('response_complete', (data) => {
+    if (streamingText.value) {
+      chatHistory.value.push({ role: 'assistant', text: streamingText.value });
+      streamingText.value = '';
+    }
+    if (data && data.next_node_id) {
+      currentNodeId.value = data.next_node_id;
+    }
+    if (data && data.possible_next_nodes) {
+      possibleNextNodes.value = data.possible_next_nodes;
+    }
+    if (data && data.session_ended) {
+      alert("Dialogue session has completed. Resetting conversational playground.");
+      chatHistory.value = [];
+      currentNodeId.value = 'start';
+      possibleNextNodes.value = [];
+    }
+  });
+
+  socket.on('error', (err) => {
+    console.error('Socket communication pipeline error:', err);
+  });
+});
+
+onBeforeUnmount(() => {
+  if (socket) {
+    socket.disconnect();
+  }
+});
+</script>
+
 <template>
   <div class="app-container">
     <header class="app-header">
@@ -51,126 +152,6 @@
     </main>
   </div>
 </template>
-
-<script>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-import { io } from 'socket.io-client';
-
-export default {
-  name: 'App',
-  setup() {
-    const configData = ref(null);
-    const loading = ref(true);
-    const error = ref(null);
-    const isConnected = ref(false);
-
-    const socketConnected = ref(false);
-    const chatHistory = ref([]);
-    const inputMessage = ref('');
-    const streamingText = ref('');
-    const currentNodeId = ref('start');
-    const possibleNextNodes = ref([]);
-    let socket = null;
-
-    const fetchConfig = async () => {
-      try {
-        const res = await fetch('/api/config');
-        if (!res.ok) {
-          throw new Error(`Failed to fetch: ${res.statusText}`);
-        }
-        configData.value = await res.json();
-        isConnected.value = true;
-      } catch (err) {
-        error.value = err.message;
-        isConnected.value = false;
-      } finally {
-        loading.value = false;
-      }
-    };
-
-    const sendMessage = () => {
-      if (!inputMessage.value.trim() || !socketConnected.value) return;
-
-      const userText = inputMessage.value.trim();
-      chatHistory.value.push({ role: 'user', text: userText });
-      inputMessage.value = '';
-      streamingText.value = '';
-
-      socket.emit('chat_message', {
-        character_id: 'werker',
-        text: userText,
-        active_node_id: currentNodeId.value,
-        history: chatHistory.value.slice(0, -1)
-      });
-    };
-
-    onMounted(() => {
-      fetchConfig();
-
-      socket = io({
-        transports: ['websocket', 'polling']
-      });
-
-      socket.on('connect', () => {
-        socketConnected.value = true;
-      });
-
-      socket.on('disconnect', () => {
-        socketConnected.value = false;
-      });
-
-      socket.on('response_chunk', (data) => {
-        if (data && data.text) {
-          streamingText.value += data.text;
-        }
-      });
-
-      socket.on('response_complete', (data) => {
-        if (streamingText.value) {
-          chatHistory.value.push({ role: 'assistant', text: streamingText.value });
-          streamingText.value = '';
-        }
-        if (data && data.next_node_id) {
-          currentNodeId.value = data.next_node_id;
-        }
-        if (data && data.possible_next_nodes) {
-          possibleNextNodes.value = data.possible_next_nodes;
-        }
-        if (data && data.session_ended) {
-          alert("Dialogue session has completed. Resetting conversational playground.");
-          chatHistory.value = [];
-          currentNodeId.value = 'start';
-          possibleNextNodes.value = [];
-        }
-      });
-
-      socket.on('error', (err) => {
-        console.error('Socket communication pipeline error:', err);
-      });
-    });
-
-    onBeforeUnmount(() => {
-      if (socket) {
-        socket.disconnect();
-      }
-    });
-
-    return {
-      configData,
-      loading,
-      error,
-      isConnected,
-      socketConnected,
-      chatHistory,
-      inputMessage,
-      streamingText,
-      currentNodeId,
-      possibleNextNodes,
-      sendMessage,
-    };
-  },
-};
-</script>
 
 <style>
 body {

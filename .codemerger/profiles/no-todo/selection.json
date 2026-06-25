@@ -17,11 +17,11 @@
   },
   {
     "path": "frontend/src/App.vue",
-    "tokens": 2198,
+    "tokens": 2118,
     "ignoreTokens": false,
-    "lines": 357,
-    "mtime": 1781167560.9715981,
-    "hash": "ef43bb693bd87fafb6cd0d4a80584bd54a26dfb4"
+    "lines": 338,
+    "mtime": 1782400929.9811535,
+    "hash": "099d3eaddc916146b7e3c975cdf8eff3606980bd"
   },
   {
     "path": "frontend/src/main.js",

@@ -70,5 +70,5 @@
     "backend/scripts/services/ollama_service.py",
     "backend/scripts/utils/logger.py"
   ],
-  "total_tokens": 35284
+  "total_tokens": 35204
 }
