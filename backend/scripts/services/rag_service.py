@@ -4,6 +4,9 @@ import logging
 from typing import Dict, Any, List
 import numpy as np
 from rank_bm25 import BM25Okapi
+from scripts.utils.logger import PipelineLogger
+from scripts.services.llm_service import api_request
+from scripts.services.ollama_service import is_ollama_available, load_ollama_config
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +81,6 @@ def init_rag_schemes():
 init_rag_schemes()
 
 def get_embedding(text: str) -> List[float]:
-    from scripts.services.ollama_service import is_ollama_available, load_ollama_config
     ollama_cfg = load_ollama_config()
     ollama_active = ollama_cfg.get("embedding_enabled", True) and is_ollama_available()
 
@@ -125,7 +127,6 @@ class RAGIndex:
 
     def load_index(self):
         metadata_path = os.path.join(self.scheme_dir, "db_metadata.json")
-        from scripts.utils.logger import PipelineLogger
         if not os.path.exists(metadata_path):
             PipelineLogger.rag(f"Metadata file not found at: {metadata_path}")
             return
@@ -227,7 +228,6 @@ _index_cache = {}
 
 def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: int = 4) -> List[Dict[str, Any]]:
     global _index_cache
-    from scripts.utils.logger import PipelineLogger
     PipelineLogger.rag(f"Initiating hybrid retrieval. Query: '{query}', Scheme: '{scheme_id}', POV Filter: '{pov_filter}', Top K: {top_k}")
     if scheme_id not in _index_cache:
         PipelineLogger.rag(f"Scheme '{scheme_id}' not found in cache. Initializing...")
@@ -386,9 +386,10 @@ def rewrite_query(user_message: str, history: List[Dict[str, str]]) -> str:
         Rewritten Query:
     """
     try:
-        from scripts.services.llm_service import api_request
+        
         rewritten = api_request([{"role": "user", "content": prompt}], stream=False)
         if rewritten and isinstance(rewritten, str):
+            PipelineLogger.rag(rewritten.strip())
             return rewritten.strip()
     except Exception as e:
         logger.error(f"Query rewriting failed: {e}")
