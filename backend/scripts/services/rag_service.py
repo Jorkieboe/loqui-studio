@@ -11,26 +11,29 @@ BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__
 ASSETS_DIR = os.path.join(BACKEND_DIR, "assets")
 RAG_SCHEMES_DIR = os.path.join(ASSETS_DIR, "rag_schemes")
 
-STOP_WORDS = {
-    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as", "at",
-    "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't", "cannot", "could",
-    "couldn't", "did", "didn't", "do", "does", "doesn't", "doing", "don't", "down", "during", "each", "few", "for",
-    "from", "further", "had", "hadn't", "has", "hasn't", "have", "haven't", "having", "he", "he'd", "he'll", "he's",
-    "her", "here", "here's", "hers", "herself", "him", "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm",
-    "i've", "if", "in", "into", "is", "isn't", "it", "it's", "its", "itself", "let's", "me", "more", "most", "mustn't",
-    "my", "myself", "no", "nor", "not", "of", "off", "on", "once", "only", "or", "other", "ought", "our", "ours",
-    "ourselves", "out", "over", "own", "same", "shan't", "she", "she'd", "she'll", "she's", "should", "shouldn't",
-    "so", "some", "such", "than", "that", "that's", "the", "their", "theirs", "them", "themselves", "then", "there",
-    "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this", "those", "through", "to", "too",
-    "under", "until", "up", "very", "was", "wasn't", "we", "we'd", "we'll", "we're", "we've", "were", "weren't",
-    "what", "what's", "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom", "why", "why's",
-    "with", "won't", "would", "wouldn't", "you", "you're", "your", "yours", "yourselves", "yourself"
-}
+# [MODIFIED] Retrieve combined English and Dutch stop words from spaCy
+try:
+    from spacy.lang.en.stop_words import STOP_WORDS as EN_STOP_WORDS
+    from spacy.lang.nl.stop_words import STOP_WORDS as NL_STOP_WORDS
+    SPACY_STOP_WORDS = EN_STOP_WORDS.union(NL_STOP_WORDS)
+except ImportError:
+    # Safe static fallback in case dependencies are loading
+    SPACY_STOP_WORDS = {
+        "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "as", "at",
+        "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can", "did", "do",
+        "for", "from", "further", "had", "has", "have", "having", "he", "her", "here", "hers", "him", "his", "how",
+        "i", "if", "in", "into", "is", "it", "its", "me", "more", "most", "my", "myself", "no", "nor", "not", "of",
+        "on", "once", "only", "or", "other", "our", "ours", "out", "over", "own", "same", "she", "should", "so",
+        "some", "such", "than", "that", "the", "their", "theirs", "them", "then", "there", "these", "they", "this",
+        "those", "through", "to", "too", "under", "until", "up", "very", "was", "we", "were", "what", "when", "where",
+        "which", "while", "who", "whom", "why", "with", "you", "your", "yours", "yourself", "yourselves",
+        "de", "het", "een", "en", "van", "ik", "je", "hij", "we", "ze", "te", "in", "op", "met", "voor", "aan", "om"
+    }
 
 def remove_stop_words(text: str) -> List[str]:
     cleaned = text.lower().replace("?", "").replace(".", "").replace(",", "").replace("!", "")
     words = cleaned.split()
-    return [w for w in words if w not in STOP_WORDS]
+    return [w for w in words if w not in SPACY_STOP_WORDS]
 
 def init_rag_schemes():
     os.makedirs(RAG_SCHEMES_DIR, exist_ok=True)

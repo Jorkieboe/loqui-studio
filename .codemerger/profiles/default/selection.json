@@ -43,10 +43,10 @@
   },
   {
     "path": "requirements.txt",
-    "tokens": 160,
-    "lines": 17,
-    "mtime": 1782314558.2902353,
-    "hash": "d4a870e050234cade86823b59d5f1e1b4cdc892c"
+    "tokens": 169,
+    "lines": 18,
+    "mtime": 1782397983.1967363,
+    "hash": "9aed8213ff8a95aa36a358818676b8c3fa51337e"
   },
   {
     "path": "backend/config.json",
@@ -121,10 +121,10 @@
   },
   {
     "path": "backend/scripts/services/rag_service.py",
-    "tokens": 4186,
-    "lines": 392,
-    "mtime": 1782314558.639913,
-    "hash": "76634408fdf3b4f344d9addb8aa5803bb0eeef0c"
+    "tokens": 4071,
+    "lines": 395,
+    "mtime": 1782397983.2935555,
+    "hash": "6448c9f80d5b3cc0c611cb370afd1c1270a5c6ca"
   },
   {
     "path": "backend/scripts/core/chatsession.py",

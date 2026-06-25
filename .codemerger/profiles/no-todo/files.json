@@ -52,8 +52,6 @@
     "requirements.txt",
     "todo.md"
   ],
-  "unknown_files": [
-    "backend/assets/rag_schemes/industrial/db_metadata.json"
-  ],
-  "total_tokens": 35558
+  "unknown_files": [],
+  "total_tokens": 35452
 }
