@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TestChatPanel from '../components/TestChatPanel.vue'
 import GraphEditor from '../components/GraphEditor.vue'
@@ -43,6 +43,20 @@ const selectedNodeLabel = ref(null)
 const selectedPromptNode = computed(() => {
   if (!selectedNodeLabel.value) return null
   return prompts.value.var_prompt?.find(p => p.id === selectedNodeLabel.value) || null
+})
+
+const editingNodeTitle = ref(false)
+const nodeTitleInput = ref(null)
+
+async function startEditTitle() {
+  editingNodeTitle.value = true
+  await nextTick()
+  nodeTitleInput.value?.focus()
+  nodeTitleInput.value?.select()
+}
+
+watch(selectedNodeLabel, () => {
+  editingNodeTitle.value = false
 })
 
 async function loadCharacter() {
@@ -249,7 +263,26 @@ onBeforeUnmount(() => {
             Click a node to edit its properties.
           </div>
           <template v-else>
-            <h3 class="node-title">{{ selectedPromptNode.displayName || selectedPromptNode.id }}</h3>
+            <div class="node-title-row">
+              <h3 v-if="!editingNodeTitle" class="node-title">
+                {{ selectedPromptNode.displayName || selectedPromptNode.id }}
+              </h3>
+              <input
+                v-else
+                ref="nodeTitleInput"
+                class="node-title-input"
+                v-model="selectedPromptNode.displayName"
+                @blur="editingNodeTitle = false"
+                @keydown.enter="editingNodeTitle = false"
+                @keydown.escape="editingNodeTitle = false"
+              />
+              <button class="node-title-edit-btn" @click="startEditTitle" title="Rename node">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+            </div>
             <div class="field">
               <label>Instruction</label>
               <textarea v-model="selectedPromptNode.goal" rows="4" />
@@ -542,9 +575,49 @@ onBeforeUnmount(() => {
   padding: 0 0.5rem;
 }
 
+.node-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
 .node-title {
+  flex: 1;
   font-size: 1rem;
   font-weight: 700;
-  margin-bottom: 1rem;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-title-input {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 700;
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  padding: 0.15rem 0.35rem;
+  outline: none;
+  background: white;
+}
+
+.node-title-edit-btn {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.node-title-edit-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary-dark);
 }
 </style>

@@ -137,17 +137,18 @@ onMounted(() => {
   max-width: 200px;
   cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
 }
 
 .node.selected {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-light);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12), 0 0 0 3px rgba(61, 207, 172, 0.35);
 }
 
 .node.start-node {
   min-width: 80px;
   padding: 0.4rem 0.75rem;
-  background: #f0f0f0;
+  background: var(--primary-light);
   text-align: center;
 }
 
@@ -166,7 +167,9 @@ onMounted(() => {
   padding: 0.4rem 0.6rem;
   font-weight: 600;
   font-size: 0.85rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  background: var(--primary-light);
+  border-radius: calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0 0;
 }
 
 .node-goal {
