@@ -146,8 +146,10 @@ onBeforeUnmount(() => {
   <div class="editor" v-if="!loading">
     <div class="editor-inner">
       <div class="tabs-bar">
-        <button class="tab" :class="{ active: activeTab === 'base' }" @click="activeTab = 'base'">Base prompt</button>
-        <button class="tab" :class="{ active: activeTab === 'graph' }" @click="activeTab = 'graph'">Graph</button>
+        <div class="tabs-track">
+          <button class="tab" :class="{ active: activeTab === 'base' }" @click="activeTab = 'base'">Base prompt</button>
+          <button class="tab" :class="{ active: activeTab === 'graph' }" @click="activeTab = 'graph'">Graph</button>
+        </div>
       </div>
 
       <div v-if="saveError" class="save-error">{{ saveError }}</div>
@@ -155,6 +157,7 @@ onBeforeUnmount(() => {
       <!-- BASE PROMPT TAB -->
       <div v-if="activeTab === 'base'" class="tab-content base-tab">
         <div class="form-col scrollable">
+          <div class="form-inner">
           <section class="form-section">
             <div class="section-header">Basic Info</div>
             <div class="avatar-row">
@@ -170,7 +173,7 @@ onBeforeUnmount(() => {
                 </div>
                 <div class="field">
                   <label>Description</label>
-                  <textarea v-model="info.description" rows="3" />
+                  <textarea v-model="info.description" rows="4" />
                 </div>
               </div>
             </div>
@@ -231,6 +234,7 @@ onBeforeUnmount(() => {
               <input v-model="info.rag.pov" type="text" placeholder="e.g. jan_zizka" />
             </div>
           </section>
+          </div><!-- /form-inner -->
         </div>
 
         <div class="chat-col">
@@ -312,27 +316,39 @@ onBeforeUnmount(() => {
 .tabs-bar {
   display: flex;
   justify-content: center;
-  gap: 0;
-  padding: 0.75rem 0;
+  align-items: center;
+  padding: 0.65rem 0;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
-.tab {
-  padding: 0.45rem 1.75rem;
-  border: 1px solid var(--primary);
-  background: white;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+/* Teal pill container — fixed width, 50/50 split */
+.tabs-track {
+  display: flex;
+  width: 380px;
+  background: var(--primary);
+  border-radius: 6px;
+  padding: 4px;
+  gap: 0;
 }
 
-.tab:first-child { border-radius: var(--radius) 0 0 var(--radius); }
-.tab:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+.tab {
+  flex: 1;
+  padding: 0.45rem 0;
+  text-align: center;
+  background: transparent;
+  color: white;
+  font-size: 0.92rem;
+  font-weight: 400;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, font-weight 0.1s;
+}
 
 .tab.active {
-  background: var(--primary);
-  color: white;
+  background: white;
+  color: #2a2a2a;
+  font-weight: 600;
 }
 
 .save-error {
@@ -407,14 +423,14 @@ onBeforeUnmount(() => {
 
 .avatar-row {
   display: flex;
-  gap: 1rem;
-  align-items: flex-start;
-  margin-top: 0.5rem;
+  gap: 1.5rem;
+  align-items: center; /* center avatar between the two fields */
+  margin-top: 0.75rem;
 }
 
 .avatar-upload {
-  width: 72px;
-  height: 72px;
+  width: 140px;
+  height: 140px;
   border: 2px dashed var(--border);
   border-radius: var(--radius);
   display: flex;
@@ -437,7 +453,7 @@ onBeforeUnmount(() => {
 }
 
 .avatar-plus {
-  font-size: 1.8rem;
+  font-size: 3.5rem;
   color: var(--text-muted);
   line-height: 1;
 }
@@ -449,6 +465,7 @@ onBeforeUnmount(() => {
 
 .field {
   margin-bottom: 0.75rem;
+  max-width: 1000px;
 }
 
 .field label {
