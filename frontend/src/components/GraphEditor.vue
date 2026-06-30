@@ -9,9 +9,13 @@ const props = defineProps({
   varPrompt:  { type: Array,  default: () => [] },
 })
 
-const emit = defineEmits(['nodeSelected', 'addNode'])
+const emit = defineEmits([
+  'nodeSelected', 'addNode',
+  'connectEdge', 'disconnectEdges',
+  'removeNodes', 'updatePositions',
+])
 
-const { onNodeClick, fitView } = useVueFlow()
+const { onNodeClick, fitView, onNodesChange, onEdgesChange, onConnect, onNodeDragStop } = useVueFlow()
 
 const nodes        = ref([])
 const edges        = ref([])
@@ -70,12 +74,51 @@ onNodeClick(({ node }) => {
   emit('nodeSelected', node.id)
 })
 
+// ── Sync VueFlow changes back to parent ──────────────────────────────────────
+
+// New edge drawn by user
+onConnect((connection) => {
+  emit('connectEdge', {
+    source:       connection.source,
+    target:       connection.target,
+    sourceHandle: connection.sourceHandle || null,
+  })
+})
+
+// Edge deleted (select + Delete key)
+onEdgesChange((changes) => {
+  const removals = changes.filter(c => c.type === 'remove')
+  if (!removals.length) return
+  // Edges are still in edges.value at this point (change fires before model update)
+  const removed = removals
+    .map(c => edges.value.find(e => e.id === c.id))
+    .filter(Boolean)
+    .map(e => ({ source: e.source, target: e.target, sourceHandle: e.sourceHandle || null }))
+  if (removed.length) emit('disconnectEdges', removed)
+})
+
+// Node deleted
+onNodesChange((changes) => {
+  const removals = changes.filter(c => c.type === 'remove')
+  if (removals.length) {
+    emit('removeNodes', removals.map(c => c.id))
+    removals.forEach(c => { if (selectedId.value === c.id) selectedId.value = null })
+  }
+})
+
+// Node drag ended — node.position is the final resting place
+onNodeDragStop(({ node }) => {
+  emit('updatePositions', [{ id: node.id, position: node.position }])
+})
+
 function addNode(type) {
   emit('addNode', type)
   showAddMenu.value = false
 }
 
-watch(() => [props.varPrompt, props.layoutData], buildGraph, { deep: true, immediate: true })
+// Only rebuild when varPrompt changes — layoutData position updates must NOT
+// re-trigger buildGraph or VueFlow's internal positions get overwritten mid-drag.
+watch(() => props.varPrompt, buildGraph, { deep: true, immediate: true })
 onMounted(() => setTimeout(() => fitView(), 100))
 </script>
 

@@ -1,5 +1,7 @@
 {
   "known_files": [
+    ".claude/CLAUDE.md",
+    ".claude/settings.local.json",
     "2do.txt",
     "README.md",
     "architecture.md",
@@ -43,7 +45,20 @@
     "frontend/index.html",
     "frontend/jsconfig.json",
     "frontend/src/App.vue",
+    "frontend/src/components/AppNavbar.vue",
+    "frontend/src/components/CharacterCard.vue",
+    "frontend/src/components/GraphEditor.vue",
+    "frontend/src/components/TestChatPanel.vue",
+    "frontend/src/components/ValidationBlock.vue",
     "frontend/src/main.js",
+    "frontend/src/router/index.js",
+    "frontend/src/stores/navbar.js",
+    "frontend/src/utils/chatHistory.js",
+    "frontend/src/views/CharacterEditorView.vue",
+    "frontend/src/views/CharacterNewView.vue",
+    "frontend/src/views/CharactersView.vue",
+    "frontend/src/views/ChatView.vue",
+    "frontend/src/views/HomeView.vue",
     "frontend/vite.config.mjs",
     "go.bat",
     "llm.md",
@@ -52,6 +67,22 @@
     "requirements.txt",
     "todo.md"
   ],
-  "unknown_files": [],
+  "unknown_files": [
+    ".claude/CLAUDE.md",
+    ".claude/settings.local.json",
+    "frontend/src/components/AppNavbar.vue",
+    "frontend/src/components/CharacterCard.vue",
+    "frontend/src/components/GraphEditor.vue",
+    "frontend/src/components/TestChatPanel.vue",
+    "frontend/src/components/ValidationBlock.vue",
+    "frontend/src/router/index.js",
+    "frontend/src/stores/navbar.js",
+    "frontend/src/utils/chatHistory.js",
+    "frontend/src/views/CharacterEditorView.vue",
+    "frontend/src/views/CharacterNewView.vue",
+    "frontend/src/views/CharactersView.vue",
+    "frontend/src/views/ChatView.vue",
+    "frontend/src/views/HomeView.vue"
+  ],
   "total_tokens": 35372
 }

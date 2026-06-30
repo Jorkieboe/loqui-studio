@@ -1,5 +1,7 @@
 {
   "known_files": [
+    ".claude/CLAUDE.md",
+    ".claude/settings.local.json",
     "2do.txt",
     "README.md",
     "architecture.md",
@@ -43,7 +45,20 @@
     "frontend/index.html",
     "frontend/jsconfig.json",
     "frontend/src/App.vue",
+    "frontend/src/components/AppNavbar.vue",
+    "frontend/src/components/CharacterCard.vue",
+    "frontend/src/components/GraphEditor.vue",
+    "frontend/src/components/TestChatPanel.vue",
+    "frontend/src/components/ValidationBlock.vue",
     "frontend/src/main.js",
+    "frontend/src/router/index.js",
+    "frontend/src/stores/navbar.js",
+    "frontend/src/utils/chatHistory.js",
+    "frontend/src/views/CharacterEditorView.vue",
+    "frontend/src/views/CharacterNewView.vue",
+    "frontend/src/views/CharactersView.vue",
+    "frontend/src/views/ChatView.vue",
+    "frontend/src/views/HomeView.vue",
     "frontend/vite.config.mjs",
     "go.bat",
     "llm.md",
@@ -53,6 +68,8 @@
     "todo.md"
   ],
   "unknown_files": [
+    ".claude/CLAUDE.md",
+    ".claude/settings.local.json",
     "backend/assets/characters/guillaume/db_metadata.json",
     "backend/assets/characters/guillaume/info.json",
     "backend/assets/characters/guillaume/layout.json",
@@ -68,7 +85,20 @@
     "backend/assets/rag_schemes/industrial/info.json",
     "backend/scripts/core/session_manager.py",
     "backend/scripts/services/ollama_service.py",
-    "backend/scripts/utils/logger.py"
+    "backend/scripts/utils/logger.py",
+    "frontend/src/components/AppNavbar.vue",
+    "frontend/src/components/CharacterCard.vue",
+    "frontend/src/components/GraphEditor.vue",
+    "frontend/src/components/TestChatPanel.vue",
+    "frontend/src/components/ValidationBlock.vue",
+    "frontend/src/router/index.js",
+    "frontend/src/stores/navbar.js",
+    "frontend/src/utils/chatHistory.js",
+    "frontend/src/views/CharacterEditorView.vue",
+    "frontend/src/views/CharacterNewView.vue",
+    "frontend/src/views/CharactersView.vue",
+    "frontend/src/views/ChatView.vue",
+    "frontend/src/views/HomeView.vue"
   ],
   "total_tokens": 35204
 }

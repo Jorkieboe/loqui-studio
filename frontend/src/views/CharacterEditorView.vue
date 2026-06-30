@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TestChatPanel from '../components/TestChatPanel.vue'
 import GraphEditor from '../components/GraphEditor.vue'
+import ValidationBlock from '../components/ValidationBlock.vue'
 import { useNavbarStore } from '../stores/navbar'
 
 const route = useRoute()
@@ -144,6 +145,62 @@ const NODE_DEFAULTS = {
   'cycle-node': { node_class: 'flow',   displayName: 'Cycle',   next: [] },
 }
 
+// ── Graph sync handlers ───────────────────────────────────────────────────────
+
+function onConnectEdge({ source, target, sourceHandle }) {
+  const node = prompts.value.var_prompt?.find(n => n.id === source)
+  if (!node) return
+  node.next = node.next || []
+
+  if (node.type === 'loop-node') {
+    // loop-body → next[0], loop-exit → next[1]
+    const idx = sourceHandle === 'loop-body' ? 0 : 1
+    node.next[idx] = { target }
+  } else {
+    if (!node.next.find(c => c.target === target))
+      node.next.push({ target })
+  }
+}
+
+function onDisconnectEdges(connections) {
+  for (const { source, target, sourceHandle } of connections) {
+    const node = prompts.value.var_prompt?.find(n => n.id === source)
+    if (!node) continue
+
+    if (node.type === 'loop-node') {
+      const idx = sourceHandle === 'loop-body' ? 0 : 1
+      if (node.next?.[idx]?.target === target) node.next.splice(idx, 1)
+    } else {
+      node.next = (node.next || []).filter(c => c.target !== target)
+    }
+  }
+}
+
+function onRemoveNodes(ids) {
+  const idSet = new Set(ids)
+  prompts.value.var_prompt = (prompts.value.var_prompt || []).filter(n => !idSet.has(n.id))
+  layout.value.nodes      = (layout.value.nodes || []).filter(n => !idSet.has(n.id) && !idSet.has(n.label))
+  // Clean dangling next references
+  for (const node of (prompts.value.var_prompt || []))
+    node.next = (node.next || []).filter(c => !idSet.has(c.target))
+  if (selectedNodeId.value && idSet.has(selectedNodeId.value))
+    selectedNodeId.value = null
+}
+
+function onUpdatePositions(updates) {
+  for (const { id, position } of updates) {
+    const existing = layout.value.nodes?.find(n => n.id === id || n.label === id)
+    if (existing) {
+      console.log(existing)
+      existing.position = position
+    } else {
+      layout.value.nodes = [...(layout.value.nodes || []), { id, label: id, position, data: {} }]
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function onAddNode(type) {
   const defaults = NODE_DEFAULTS[type]
   if (!defaults) return
@@ -161,6 +218,38 @@ function onAddNode(type) {
 }
 
 const draftConfig = computed(() => ({ info: info.value, prompts: prompts.value, layout: layout.value }))
+
+const validationErrors = computed(() => {
+  const errors = []
+  const p = prompts.value
+
+  if (!p.base_prompt?.trim())
+    errors.push('Character introduction is empty')
+
+  const filledDos = (p.do || []).filter(v => v?.trim())
+  if (filledDos.length < 3)
+    errors.push(`At least 3 Do's required (${filledDos.length} filled)`)
+
+  const filledDonts = (p["don't"] || []).filter(v => v?.trim())
+  if (filledDonts.length < 3)
+    errors.push(`At least 3 Don'ts required (${filledDonts.length} filled)`)
+
+  const varPrompt = p.var_prompt || []
+  const startNode = varPrompt.find(n => n.type === 'start-node')
+  if (!startNode) {
+    errors.push('Graph is missing a Start node')
+  } else {
+    const connected = (startNode.next || []).some(conn =>
+      varPrompt.find(n => n.id === conn.target)?.node_class === 'prompt'
+    )
+    if (!connected)
+      errors.push('Start node must connect to at least one prompt node')
+  }
+
+  return errors
+})
+
+const isValid = computed(() => validationErrors.value.length === 0)
 
 onMounted(async () => {
   await loadCharacter()
@@ -268,7 +357,8 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="chat-col">
-          <TestChatPanel :draft-config="draftConfig" />
+          <ValidationBlock v-if="!isValid" :errors="validationErrors" />
+          <TestChatPanel v-else :draft-config="draftConfig" />
         </div>
       </div>
 
@@ -360,11 +450,16 @@ onBeforeUnmount(() => {
             :var-prompt="prompts.var_prompt || []"
             @nodeSelected="onNodeSelected"
             @addNode="onAddNode"
+            @connectEdge="onConnectEdge"
+            @disconnectEdges="onDisconnectEdges"
+            @removeNodes="onRemoveNodes"
+            @updatePositions="onUpdatePositions"
           />
         </div>
 
         <div class="chat-col">
-          <TestChatPanel :draft-config="draftConfig" />
+          <ValidationBlock v-if="!isValid" :errors="validationErrors" />
+          <TestChatPanel v-else :draft-config="draftConfig" />
         </div>
       </div>
     </div>
