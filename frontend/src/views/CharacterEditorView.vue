@@ -151,19 +151,24 @@ const NODE_DEFAULTS = {
 
 // ── Graph sync handlers ───────────────────────────────────────────────────────
 
+function resetChat() {
+  chatMessages.value     = []
+  chatSessionState.value = { active_node_id: null, history: [] }
+}
+
 function onConnectEdge({ source, target, sourceHandle }) {
   const node = prompts.value.var_prompt?.find(n => n.id === source)
   if (!node) return
   node.next = node.next || []
 
   if (node.type === 'loop-node') {
-    // loop-body → next[0], loop-exit → next[1]
     const idx = sourceHandle === 'loop-body' ? 0 : 1
     node.next[idx] = { target }
   } else {
     if (!node.next.find(c => c.target === target))
       node.next.push({ target })
   }
+  resetChat()
 }
 
 function onDisconnectEdges(connections) {
@@ -178,24 +183,24 @@ function onDisconnectEdges(connections) {
       node.next = (node.next || []).filter(c => c.target !== target)
     }
   }
+  resetChat()
 }
 
 function onRemoveNodes(ids) {
   const idSet = new Set(ids)
   prompts.value.var_prompt = (prompts.value.var_prompt || []).filter(n => !idSet.has(n.id))
   layout.value.nodes      = (layout.value.nodes || []).filter(n => !idSet.has(n.id) && !idSet.has(n.label))
-  // Clean dangling next references
   for (const node of (prompts.value.var_prompt || []))
     node.next = (node.next || []).filter(c => !idSet.has(c.target))
   if (selectedNodeId.value && idSet.has(selectedNodeId.value))
     selectedNodeId.value = null
+  resetChat()
 }
 
 function onUpdatePositions(updates) {
   for (const { id, position } of updates) {
     const existing = layout.value.nodes?.find(n => n.id === id || n.label === id)
     if (existing) {
-      console.log(existing)
       existing.position = position
     } else {
       layout.value.nodes = [...(layout.value.nodes || []), { id, label: id, position, data: {} }]
@@ -452,6 +457,7 @@ onBeforeUnmount(() => {
           <GraphEditor
             :layout-data="layout"
             :var-prompt="prompts.var_prompt || []"
+            :active-node-id="chatSessionState.active_node_id"
             @nodeSelected="onNodeSelected"
             @addNode="onAddNode"
             @connectEdge="onConnectEdge"

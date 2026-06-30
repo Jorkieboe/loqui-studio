@@ -5,8 +5,9 @@ import { Background } from '@vue-flow/background'
 import '@vue-flow/core/dist/style.css'
 
 const props = defineProps({
-  layoutData: { type: Object, default: () => ({ nodes: [], connections: [] }) },
-  varPrompt:  { type: Array,  default: () => [] },
+  layoutData:   { type: Object, default: () => ({ nodes: [], connections: [] }) },
+  varPrompt:    { type: Array,  default: () => [] },
+  activeNodeId: { type: String, default: null },
 })
 
 const emit = defineEmits([
@@ -137,7 +138,7 @@ onMounted(() => setTimeout(() => fitView(), 100))
 
       <!-- START -->
       <template #node-start-node="{ id, data }">
-        <div class="node node-flow node-start" :class="{ selected: selectedId === id }">
+        <div class="node node-flow node-start" :class="{ selected: selectedId === id, active: props.activeNodeId === id }">
           <div class="flow-label">{{ data.label }}</div>
           <Handle type="source" position="bottom" class="handle" />
         </div>
@@ -145,7 +146,7 @@ onMounted(() => setTimeout(() => fitView(), 100))
 
       <!-- END -->
       <template #node-end-node="{ id, data }">
-        <div class="node node-flow node-end" :class="{ selected: selectedId === id }">
+        <div class="node node-flow node-end" :class="{ selected: selectedId === id, active: props.activeNodeId === id }">
           <Handle type="target" position="top" class="handle" />
           <div class="flow-label">{{ data.label }}</div>
         </div>
@@ -153,7 +154,7 @@ onMounted(() => setTimeout(() => fitView(), 100))
 
       <!-- CYCLE -->
       <template #node-cycle-node="{ id, data }">
-        <div class="node node-flow node-cycle" :class="{ selected: selectedId === id }">
+        <div class="node node-flow node-cycle" :class="{ selected: selectedId === id, active: props.activeNodeId === id }">
           <Handle type="target" position="top" class="handle" />
           <div class="flow-label">{{ data.label }}</div>
           <Handle type="source" position="bottom" class="handle" />
@@ -162,7 +163,7 @@ onMounted(() => setTimeout(() => fitView(), 100))
 
       <!-- LOOP -->
       <template #node-loop-node="{ id, data }">
-        <div class="node node-loop" :class="{ selected: selectedId === id }">
+        <div class="node node-loop" :class="{ selected: selectedId === id, active: props.activeNodeId === id }">
           <Handle type="target" position="top" class="handle" />
           <div class="loop-header">
             <span class="loop-name">{{ data.label }}</span>
@@ -181,7 +182,7 @@ onMounted(() => setTimeout(() => fitView(), 100))
 
       <!-- PROMPT (basic / advanced) -->
       <template #node-prompt-node="{ id, data }">
-        <div class="node node-content node-prompt" :class="{ selected: selectedId === id }">
+        <div class="node node-content node-prompt" :class="{ selected: selectedId === id, active: props.activeNodeId === id }">
           <Handle type="target" position="top" class="handle" />
           <div class="content-header prompt-header">{{ data.label }}</div>
           <div v-if="data.goal" class="content-goal">{{ data.goal }}</div>
@@ -191,7 +192,7 @@ onMounted(() => setTimeout(() => fitView(), 100))
 
       <!-- DEFLECT -->
       <template #node-deflect-node="{ id, data }">
-        <div class="node node-content node-deflect" :class="{ selected: selectedId === id }">
+        <div class="node node-content node-deflect" :class="{ selected: selectedId === id, active: props.activeNodeId === id }">
           <Handle type="target" position="top" class="handle" />
           <div class="content-header deflect-header">{{ data.label }}</div>
           <div v-if="data.goal" class="content-goal">{{ data.goal }}</div>
@@ -201,7 +202,7 @@ onMounted(() => setTimeout(() => fitView(), 100))
 
       <!-- SILENCE -->
       <template #node-silence-node="{ id, data }">
-        <div class="node node-content node-silence" :class="{ selected: selectedId === id }">
+        <div class="node node-content node-silence" :class="{ selected: selectedId === id, active: props.activeNodeId === id }">
           <Handle type="target" position="top" class="handle" />
           <div class="content-header silence-header">{{ data.label }}</div>
           <div v-if="data.goal" class="content-goal">{{ data.goal }}</div>
@@ -397,4 +398,14 @@ onMounted(() => setTimeout(() => fitView(), 100))
   inset: 0;
   z-index: 9;
 }
+
+/* ── Active (current chat node) ── */
+@keyframes node-pulse {
+  0%, 100% { box-shadow: 0 2px 8px rgba(0,0,0,.10), 0 0 0 2px #F59E0B, 0 0 10px 2px rgba(245,158,11,.35); }
+  50%       { box-shadow: 0 2px 8px rgba(0,0,0,.10), 0 0 0 2px #F59E0B, 0 0 18px 4px rgba(245,158,11,.10); }
+}
+.node.active {
+  animation: node-pulse 1.8s ease-in-out infinite;
+}
+.node.node-loop.active { border-color: #F59E0B; }
 </style>
