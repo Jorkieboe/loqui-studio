@@ -39,11 +39,15 @@ const saving = ref(false)
 const loading = ref(true)
 const saveError = ref('')
 
-const selectedNodeLabel = ref(null)
-const selectedPromptNode = computed(() => {
-  if (!selectedNodeLabel.value) return null
-  return prompts.value.var_prompt?.find(p => p.id === selectedNodeLabel.value) || null
+const selectedNodeId = ref(null)
+
+const selectedNode = computed(() => {
+  if (!selectedNodeId.value) return null
+  return prompts.value.var_prompt?.find(n => n.id === selectedNodeId.value) || null
 })
+
+const isFlowNode   = computed(() => selectedNode.value?.node_class === 'flow')
+const isPromptNode = computed(() => selectedNode.value?.node_class === 'prompt')
 
 const editingNodeTitle = ref(false)
 const nodeTitleInput = ref(null)
@@ -55,9 +59,7 @@ async function startEditTitle() {
   nodeTitleInput.value?.select()
 }
 
-watch(selectedNodeLabel, () => {
-  editingNodeTitle.value = false
-})
+watch(selectedNodeId, () => { editingNodeTitle.value = false })
 
 async function loadCharacter() {
   loading.value = true
@@ -125,23 +127,37 @@ function removeDo(i) { if (prompts.value.do.length > 1) prompts.value.do.splice(
 function addDont() { prompts.value["don't"].push('') }
 function removeDont(i) { if (prompts.value["don't"].length > 1) prompts.value["don't"].splice(i, 1) }
 
-function onNodeSelected(label) {
-  selectedNodeLabel.value = label
-  if (!selectedPromptNode.value) {
-    prompts.value.var_prompt = prompts.value.var_prompt || []
-    prompts.value.var_prompt.push({
-      id: label,
-      displayName: label,
-      node_class: 'prompt',
-      type: 'advanced',
-      goal: '',
-      tone: '',
-      example: '',
-      ext_info: 'disabled',
-      need_answer: true,
-      next: [],
-    })
-  }
+function onNodeSelected(id) {
+  selectedNodeId.value = id
+}
+
+const FLOW_TYPES = new Set(['start-node', 'end-node', 'loop-node', 'cycle-node'])
+
+const NODE_DEFAULTS = {
+  'basic':      { node_class: 'prompt', displayName: 'New node', goal: '', tone: '', next: [] },
+  'advanced':   { node_class: 'prompt', displayName: 'New node', goal: '', tone: '', example: '', follow_up: '', ext_info: 'disabled', next: [] },
+  'deflect':    { node_class: 'prompt', displayName: 'Deflect',  goal: '', tone: '', example: '', next: [] },
+  'silence':    { node_class: 'prompt', displayName: 'Silence',  goal: '', tone: '', example: '', next: [] },
+  'start-node': { node_class: 'flow',   displayName: 'Start',   next: [] },
+  'end-node':   { node_class: 'flow',   displayName: 'End',     next: [] },
+  'loop-node':  { node_class: 'flow',   displayName: 'Loop',    loop_count: 3, next: [] },
+  'cycle-node': { node_class: 'flow',   displayName: 'Cycle',   next: [] },
+}
+
+function onAddNode(type) {
+  const defaults = NODE_DEFAULTS[type]
+  if (!defaults) return
+  const id = `${type}_${Date.now()}`
+  prompts.value.var_prompt = [...(prompts.value.var_prompt || []), { id, type, ...defaults }]
+  const count = prompts.value.var_prompt.length
+  layout.value.nodes = [...(layout.value.nodes || []), {
+    id, label: id,
+    node_class: defaults.node_class,
+    type,
+    position: { x: 250, y: count * 160 },
+    data: {},
+  }]
+  selectedNodeId.value = id
 }
 
 const draftConfig = computed(() => ({ info: info.value, prompts: prompts.value, layout: layout.value }))
@@ -259,19 +275,39 @@ onBeforeUnmount(() => {
       <!-- GRAPH TAB -->
       <div v-if="activeTab === 'graph'" class="tab-content graph-tab">
         <div class="node-editor-col scrollable">
-          <div v-if="!selectedPromptNode" class="node-hint">
-            Click a node to edit its properties.
-          </div>
-          <template v-else>
+
+          <!-- Nothing selected -->
+          <div v-if="!selectedNode" class="node-hint">Click a node to edit its properties.</div>
+
+          <!-- Flow: start / end / cycle — no editable props -->
+          <template v-else-if="isFlowNode && selectedNode.type !== 'loop-node'">
+            <div class="node-type-badge" :class="selectedNode.type + '-badge'">{{ selectedNode.type }}</div>
+            <div class="node-hint" style="margin-top:1rem">No editable properties for this node.</div>
+          </template>
+
+          <!-- Flow: loop -->
+          <template v-else-if="selectedNode.type === 'loop-node'">
+            <div class="node-type-badge loop-node-badge">loop</div>
             <div class="node-title-row">
-              <h3 v-if="!editingNodeTitle" class="node-title">
-                {{ selectedPromptNode.displayName || selectedPromptNode.id }}
-              </h3>
+              <h3 class="node-title">{{ selectedNode.displayName }}</h3>
+            </div>
+            <div class="field">
+              <label>Loop count</label>
+              <input type="number" min="1" v-model.number="selectedNode.loop_count" />
+            </div>
+            <p class="field-hint">Number of times the loop runs before exiting via the Exit handle.</p>
+          </template>
+
+          <!-- Prompt nodes: basic / advanced / deflect / silence -->
+          <template v-else-if="isPromptNode">
+            <div class="node-type-badge" :class="selectedNode.type + '-badge'">{{ selectedNode.type }}</div>
+            <div class="node-title-row">
+              <h3 v-if="!editingNodeTitle" class="node-title">{{ selectedNode.displayName }}</h3>
               <input
                 v-else
                 ref="nodeTitleInput"
                 class="node-title-input"
-                v-model="selectedPromptNode.displayName"
+                v-model="selectedNode.displayName"
                 @blur="editingNodeTitle = false"
                 @keydown.enter="editingNodeTitle = false"
                 @keydown.escape="editingNodeTitle = false"
@@ -283,25 +319,38 @@ onBeforeUnmount(() => {
                 </svg>
               </button>
             </div>
+
             <div class="field">
               <label>Instruction</label>
-              <textarea v-model="selectedPromptNode.goal" rows="4" />
+              <textarea v-model="selectedNode.goal" rows="4" />
             </div>
+
             <div class="field">
-              <label>tone</label>
-              <input v-model="selectedPromptNode.tone" type="text" />
+              <label>Tone</label>
+              <input v-model="selectedNode.tone" type="text" />
             </div>
-            <div class="field">
-              <label>example</label>
-              <input v-model="selectedPromptNode.example" type="text" />
+
+            <!-- example: advanced, deflect, silence -->
+            <div v-if="selectedNode.type !== 'basic'" class="field">
+              <label>Example</label>
+              <textarea v-model="selectedNode.example" rows="2" />
             </div>
-            <div class="field">
-              <label>information retrieval</label>
-              <select v-model="selectedPromptNode.ext_info">
-                <option value="disabled">disabled</option>
-                <option value="enabled">enabled</option>
-              </select>
-            </div>
+
+            <!-- advanced-only fields -->
+            <template v-if="selectedNode.type === 'advanced'">
+              <div class="field">
+                <label>Follow up</label>
+                <input v-model="selectedNode.follow_up" type="text" />
+              </div>
+              <div class="field">
+                <label>Information retrieval</label>
+                <select v-model="selectedNode.ext_info">
+                  <option value="disabled">Disabled</option>
+                  <option value="fetch">Fetch</option>
+                  <option value="resum">Resume</option>
+                </select>
+              </div>
+            </template>
           </template>
         </div>
 
@@ -310,7 +359,7 @@ onBeforeUnmount(() => {
             :layout-data="layout"
             :var-prompt="prompts.var_prompt || []"
             @nodeSelected="onNodeSelected"
-            @update:layoutData="layout = $event"
+            @addNode="onAddNode"
           />
         </div>
 
@@ -574,6 +623,32 @@ onBeforeUnmount(() => {
   margin-top: 2rem;
   padding: 0 0.5rem;
 }
+
+.field-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: -0.25rem 0 0.75rem;
+  line-height: 1.5;
+}
+
+.node-type-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+}
+.basic-badge      { background: #E6FAF5; color: #1a6b55; }
+.advanced-badge   { background: #E6FAF5; color: #1a6b55; }
+.deflect-badge    { background: #FEF3C7; color: #92400E; }
+.silence-badge    { background: #F1F5F9; color: #475569; }
+.loop-node-badge  { background: #EEF2FF; color: #4F46E5; }
+.start-node-badge { background: #D1FAE5; color: #065F46; }
+.end-node-badge   { background: #F3F4F6; color: #374151; }
+.cycle-node-badge { background: #FFF3E0; color: #C2410C; }
 
 .node-title-row {
   display: flex;
