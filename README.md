@@ -1,6 +1,6 @@
-# New Parley
+# Loqui Studio
 
-New Parley is an authoring platform and interactive playground designed to construct structured, human-like historical dialogues using Large Language Models (LLMs) and Hybrid Retrieval-Augmented Generation (RAG).
+Loqui Studio is an authoring platform and interactive playground designed to construct structured, human-like historical dialogues using Large Language Models (LLMs) and Hybrid Retrieval-Augmented Generation (RAG).
 
 ## Getting Started
 

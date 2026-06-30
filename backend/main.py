@@ -28,7 +28,7 @@ sio = socketio.AsyncServer(
 )
 
 # Initialize FastAPI
-app = FastAPI(title="New Parley Backend API")
+app = FastAPI(title="Loqui Studio Backend API")
 
 app.add_middleware(
     CORSMiddleware,

@@ -8,7 +8,7 @@ const navbarStore = useNavbarStore()
 
 <template>
   <nav class="navbar">
-    <router-link to="/" class="brand">New parley</router-link>
+    <router-link to="/" class="brand">Loqui Studio</router-link>
     <div class="nav-links">
       <router-link
         to="/characters"

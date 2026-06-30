@@ -16,7 +16,7 @@ from scripts.core.orchestrator import run_dialogue_pipeline
 
 async def test_run():
     print("=========================================")
-    print("   NEW PARLEY ORCHESTRATION TEST RUNNER   ")
+    print("   LOQUI STUDIO ORCHESTRATION TEST RUNNER   ")
     print("=========================================\n")
 
     char_id = "example"

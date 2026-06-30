@@ -1,4 +1,4 @@
-const KEY = 'parley_chat_sessions'
+const KEY = 'loqui_chat_sessions'
 
 export function getSessions() {
   try {
