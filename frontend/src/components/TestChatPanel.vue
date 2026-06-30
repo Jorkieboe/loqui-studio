@@ -5,18 +5,18 @@ const props = defineProps({
   draftConfig: { type: Object, default: null },
 })
 
-const messages = ref([])
-const input = ref('')
-const loading = ref(false)
-const chatEl = ref(null)
+const messages     = defineModel('messages',     { default: () => [] })
+const sessionState = defineModel('sessionState', { default: () => ({ active_node_id: null, history: [] }) })
 
-const sessionState = ref({ active_node_id: null, history: [] })
+const input   = ref('')
+const loading = ref(false)
+const chatEl  = ref(null)
 
 async function send() {
   const text = input.value.trim()
   if (!text || loading.value) return
 
-  messages.value.push({ role: 'user', text })
+  messages.value = [...messages.value, { role: 'user', text }]
   input.value = ''
   loading.value = true
   await scrollToBottom()
@@ -38,15 +38,16 @@ async function send() {
     const data = await res.json()
 
     if (!res.ok) {
-      messages.value.push({ role: 'assistant', text: `Error: ${data.detail || 'Unknown error'}`, error: true })
+      messages.value = [...messages.value, { role: 'assistant', text: `Error: ${data.detail || 'Unknown error'}`, error: true }]
     } else {
-      messages.value.push({ role: 'assistant', text: data.text })
-      sessionState.value.active_node_id = data.next_node_id
-      sessionState.value.history.push({ role: 'user', text })
-      sessionState.value.history.push({ role: 'assistant', text: data.text })
+      messages.value = [...messages.value, { role: 'assistant', text: data.text }]
+      sessionState.value = {
+        active_node_id: data.next_node_id,
+        history: [...sessionState.value.history, { role: 'user', text }, { role: 'assistant', text: data.text }],
+      }
     }
   } catch (e) {
-    messages.value.push({ role: 'assistant', text: `Connection error: ${e.message}`, error: true })
+    messages.value = [...messages.value, { role: 'assistant', text: `Connection error: ${e.message}`, error: true }]
   } finally {
     loading.value = false
     await scrollToBottom()

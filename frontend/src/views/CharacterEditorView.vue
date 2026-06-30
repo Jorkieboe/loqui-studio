@@ -13,6 +13,10 @@ const navbarStore = useNavbarStore()
 const charId = computed(() => route.params.id)
 const activeTab = ref('base')
 
+// Chat state lifted here so it survives tab switches (TestChatPanel unmounts on v-if)
+const chatMessages     = ref([])
+const chatSessionState = ref({ active_node_id: null, history: [] })
+
 const info = ref({
   id: '',
   name: '',
@@ -358,7 +362,7 @@ onBeforeUnmount(() => {
 
         <div class="chat-col">
           <ValidationBlock v-if="!isValid" :errors="validationErrors" />
-          <TestChatPanel v-else :draft-config="draftConfig" />
+          <TestChatPanel v-else :draft-config="draftConfig" v-model:messages="chatMessages" v-model:session-state="chatSessionState" />
         </div>
       </div>
 
@@ -459,7 +463,7 @@ onBeforeUnmount(() => {
 
         <div class="chat-col">
           <ValidationBlock v-if="!isValid" :errors="validationErrors" />
-          <TestChatPanel v-else :draft-config="draftConfig" />
+          <TestChatPanel v-else :draft-config="draftConfig" v-model:messages="chatMessages" v-model:session-state="chatSessionState" />
         </div>
       </div>
     </div>
