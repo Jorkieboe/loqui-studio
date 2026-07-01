@@ -46,4 +46,6 @@ backend/assets/characters/*
 
 backend/assets/rag_schemes/*
 
+loqui_studio.db
+
 
