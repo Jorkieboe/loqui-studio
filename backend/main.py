@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import socketio
 
 from scripts.api.character import router as character_router, load_character_config_sync
+from scripts.api.conversation import router as conversation_router
+from scripts.db.database import init_db
 from scripts.services.transcription_service import transcribe_audio, load_whisper_async
 from scripts.services.tts_service import stream_tts
 from scripts.core.orchestrator import run_dialogue_pipeline
@@ -39,6 +41,9 @@ app.add_middleware(
 )
 
 app.include_router(character_router, prefix="/api/characters")
+app.include_router(conversation_router, prefix="/api/conversations")
+
+init_db()
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
 
