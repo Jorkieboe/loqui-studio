@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { io } from 'socket.io-client'
-import { getSessions, saveSession, createSessionId } from '../utils/chatHistory'
+import { getSessions, createSession, getSession, appendMessage, updateNode } from '../utils/chatHistory'
 
 const route = useRoute()
 const router = useRouter()
@@ -27,48 +27,27 @@ const currentNodeId = ref('start')
 const possibleNextNodes = ref([])
 const sessionEnded = ref(false)
 
-function loadSessions() {
-  sessions.value = getSessions()
+async function loadSessions() {
+  sessions.value = await getSessions()
 }
 
-function loadSession(id) {
-  const s = sessions.value.find(s => s.id === id)
+async function loadSession(id) {
+  const s = await getSession(id)
   if (s) {
     currentSession.value = s
-    messages.value = [...(s.history || [])]
-    currentNodeId.value = s.currentNodeId || 'start'
+    // DB uses role 'character'; map to 'assistant' for the UI/socket history
+    messages.value = s.messages.map(m => ({
+      role: m.role === 'character' ? 'assistant' : m.role,
+      text: m.content,
+    }))
+    currentNodeId.value = s.current_node_id || 'start'
   }
 }
 
 async function startNewChat(char) {
-  const id = createSessionId()
-  const session = {
-    id,
-    characterId: char.id,
-    characterName: char.name,
-    characterAvatar: char.avatar || null,
-    history: [],
-    lastMessage: '',
-    timestamp: Date.now(),
-    currentNodeId: 'start',
-  }
-  saveSession(session)
-  loadSessions()
-  router.push(`/chat/${id}`)
-}
-
-function persistSession() {
-  if (!currentSession.value) return
-  const updated = {
-    ...currentSession.value,
-    history: messages.value,
-    lastMessage: messages.value.length ? messages.value[messages.value.length - 1].text.slice(0, 80) : '',
-    timestamp: Date.now(),
-    currentNodeId: currentNodeId.value,
-  }
-  saveSession(updated)
-  loadSessions()
-  currentSession.value = updated
+  const session = await createSession(char.id, char.name, char.avatar || null)
+  await loadSessions()
+  router.push(`/chat/${session.id}`)
 }
 
 function connectSocket() {
@@ -80,23 +59,27 @@ function connectSocket() {
   })
 
   socket.on('response_complete', (data) => {
-    if (streamingText.value) {
-      messages.value.push({ role: 'assistant', text: streamingText.value })
+    const responseText = streamingText.value
+    if (responseText) {
+      messages.value.push({ role: 'assistant', text: responseText })
       streamingText.value = ''
+      if (currentSession.value) appendMessage(currentSession.value.id, 'character', responseText)
     }
-    if (data?.next_node_id) currentNodeId.value = data.next_node_id
+    if (data?.next_node_id) {
+      currentNodeId.value = data.next_node_id
+      if (currentSession.value) updateNode(currentSession.value.id, data.next_node_id)
+    }
     if (data?.possible_next_nodes) possibleNextNodes.value = data.possible_next_nodes
-    if (data?.session_ended) {
-      sessionEnded.value = true
-    }
+    if (data?.session_ended) sessionEnded.value = true
     isWaiting.value = false
-    persistSession()
+    loadSessions()
     scrollToBottom()
   })
 
   socket.on('transcription', (data) => {
     if (data?.text) {
       messages.value.push({ role: 'user', text: data.text, isTranscription: true })
+      if (currentSession.value) appendMessage(currentSession.value.id, 'user', data.text)
       scrollToBottom()
     }
   })
@@ -113,12 +96,13 @@ function sendText() {
   if (!text || isWaiting.value || !currentSession.value || !socket) return
 
   messages.value.push({ role: 'user', text })
+  if (currentSession.value) appendMessage(currentSession.value.id, 'user', text)
   inputText.value = ''
   isWaiting.value = true
   scrollToBottom()
 
   socket.emit('chat_message', {
-    character_id: currentSession.value.characterId,
+    character_id: currentSession.value.character_id,
     text,
     active_node_id: currentNodeId.value,
     history: messages.value.slice(0, -1),
@@ -155,7 +139,7 @@ function sendAudio() {
     isWaiting.value = true
     socket.emit('audio_message', {
       audio: reader.result,
-      character_id: currentSession.value.characterId,
+      character_id: currentSession.value.character_id,
       active_node_id: currentNodeId.value,
       history: messages.value,
     })
@@ -198,17 +182,18 @@ function formatTime(ts) {
   return `${Math.floor(diffMins / 60)}h`
 }
 
-watch(() => route.params.id, (id) => {
+watch(() => route.params.id, async (id) => {
   messages.value = []
   streamingText.value = ''
   sessionEnded.value = false
-  if (id) loadSession(id)
+  currentSession.value = null
+  if (id) await loadSession(id)
 }, { immediate: true })
 
-onMounted(() => {
-  loadSessions()
+onMounted(async () => {
+  await loadSessions()
   connectSocket()
-  if (sessionId.value) loadSession(sessionId.value)
+  if (sessionId.value) await loadSession(sessionId.value)
 })
 
 onBeforeUnmount(() => {
@@ -231,12 +216,12 @@ onBeforeUnmount(() => {
           @click="router.push(`/chat/${s.id}`)"
         >
           <div class="session-avatar">
-            <img v-if="s.characterAvatar" :src="s.characterAvatar" :alt="s.characterName" />
-            <div v-else class="session-avatar-ph">{{ (s.characterName || '?')[0] }}</div>
+            <img v-if="s.character_avatar" :src="s.character_avatar" :alt="s.character_name" />
+            <div v-else class="session-avatar-ph">{{ (s.character_name || '?')[0] }}</div>
           </div>
           <div class="session-info">
-            <div class="session-name">{{ s.characterName }}</div>
-            <div class="session-preview">{{ s.lastMessage || 'No messages' }}</div>
+            <div class="session-name">{{ s.character_name }}</div>
+            <div class="session-preview">{{ s.last_message || 'No messages' }}</div>
           </div>
         </div>
         <div v-if="!sessions.length" class="sidebar-empty">
@@ -253,7 +238,7 @@ onBeforeUnmount(() => {
 
       <template v-else>
         <div class="chat-topbar">
-          <h2 class="char-name">{{ currentSession.characterName || 'Character' }}</h2>
+          <h2 class="char-name">{{ currentSession.character_name || 'Character' }}</h2>
           <div class="voice-toggle">
             <span>voice mode:</span>
             <button
@@ -274,7 +259,7 @@ onBeforeUnmount(() => {
               <!-- CHARACTER message — LEFT -->
               <div v-if="msg.role === 'assistant'" class="message-row assistant">
                 <div class="avatar-thumb">
-                  <img v-if="currentSession.characterAvatar" :src="currentSession.characterAvatar" alt="" />
+                  <img v-if="currentSession.character_avatar" :src="currentSession.character_avatar" alt="" />
                   <div v-else class="char-thumb">{{ (currentSession.characterName || '?')[0] }}</div>
                 </div>
                 <div class="bubble assistant-bubble">{{ msg.text }}</div>
@@ -297,7 +282,7 @@ onBeforeUnmount(() => {
             <!-- Streaming response — LEFT -->
             <div v-if="streamingText" class="message-row assistant">
               <div class="avatar-thumb">
-                <img v-if="currentSession.characterAvatar" :src="currentSession.characterAvatar" alt="" />
+                <img v-if="currentSession.character_avatar" :src="currentSession.character_avatar" alt="" />
                 <div v-else class="char-thumb">{{ (currentSession.characterName || '?')[0] }}</div>
               </div>
               <div class="bubble assistant-bubble streaming">{{ streamingText }}</div>
@@ -306,7 +291,7 @@ onBeforeUnmount(() => {
             <!-- Typing indicator — LEFT -->
             <div v-if="isWaiting && !streamingText" class="message-row assistant">
               <div class="avatar-thumb">
-                <img v-if="currentSession.characterAvatar" :src="currentSession.characterAvatar" alt="" />
+                <img v-if="currentSession.character_avatar" :src="currentSession.character_avatar" alt="" />
                 <div v-else class="char-thumb">{{ (currentSession.characterName || '?')[0] }}</div>
               </div>
               <div class="bubble assistant-bubble typing">

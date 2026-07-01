@@ -5,10 +5,13 @@ DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "l
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS conversations (
-    id             TEXT PRIMARY KEY,
-    character_name TEXT NOT NULL,
-    created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+    id              TEXT PRIMARY KEY,
+    character_id    TEXT NOT NULL,
+    character_name  TEXT NOT NULL,
+    character_avatar TEXT,
+    current_node_id TEXT NOT NULL DEFAULT 'start',
+    created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
 CREATE TABLE IF NOT EXISTS messages (

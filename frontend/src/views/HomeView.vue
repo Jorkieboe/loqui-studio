@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { getSessions, createSessionId, saveSession } from '../utils/chatHistory'
+import { getSessions, createSession } from '../utils/chatHistory'
 import CharacterCard from '../components/CharacterCard.vue'
 
 const router = useRouter()
@@ -15,23 +15,13 @@ async function loadCharacters() {
   } catch { /* offline */ }
 }
 
-function loadSessions() {
-  sessions.value = getSessions()
+async function loadSessions() {
+  sessions.value = await getSessions()
 }
 
-function startChat(char) {
-  const id = createSessionId()
-  saveSession({
-    id,
-    characterId: char.id,
-    characterName: char.name,
-    characterAvatar: char.avatar || null,
-    messages: [],
-    lastMessage: '',
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  })
-  router.push(`/chat/${id}`)
+async function startChat(char) {
+  const session = await createSession(char.id, char.name, char.avatar || null)
+  router.push(`/chat/${session.id}`)
 }
 
 function continueSession(session) {
@@ -79,13 +69,13 @@ onMounted(() => {
         >
           <!-- Avatar — full height of the card -->
           <div class="history-avatar">
-            <img v-if="session.characterAvatar" :src="session.characterAvatar" :alt="session.characterName" />
-            <div v-else class="history-avatar-placeholder">{{ (session.characterName || '?')[0] }}</div>
+            <img v-if="session.character_avatar" :src="session.character_avatar" :alt="session.character_name" />
+            <div v-else class="history-avatar-placeholder">{{ (session.character_name || '?')[0] }}</div>
           </div>
           <!-- Text -->
           <div class="history-info">
-            <div class="history-name">{{ session.characterName }}</div>
-            <div class="history-preview">{{ session.lastMessage || 'No messages yet' }}</div>
+            <div class="history-name">{{ session.character_name }}</div>
+            <div class="history-preview">{{ session.last_message || 'No messages yet' }}</div>
           </div>
         </div>
       </div>
