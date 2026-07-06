@@ -193,20 +193,16 @@ onMounted(() => setTimeout(() => fitView(), 100))
       <!-- DEFLECT -->
       <template #node-deflect-node="{ id, data }">
         <div class="node node-content node-deflect" :class="{ selected: selectedId === id, active: props.activeNodeId === id }">
-          <Handle type="target" position="top" class="handle" />
           <div class="content-header deflect-header">{{ data.label }}</div>
           <div v-if="data.goal" class="content-goal">{{ data.goal }}</div>
-          <Handle type="source" position="bottom" class="handle" />
         </div>
       </template>
 
       <!-- SILENCE -->
       <template #node-silence-node="{ id, data }">
         <div class="node node-content node-silence" :class="{ selected: selectedId === id, active: props.activeNodeId === id }">
-          <Handle type="target" position="top" class="handle" />
           <div class="content-header silence-header">{{ data.label }}</div>
           <div v-if="data.goal" class="content-goal">{{ data.goal }}</div>
-          <Handle type="source" position="bottom" class="handle" />
         </div>
       </template>
     </VueFlow>
