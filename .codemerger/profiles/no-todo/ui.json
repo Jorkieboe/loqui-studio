@@ -1,6 +1,7 @@
 {
   "name": "no todo",
   "expanded_dirs": [
+    ".claude",
     "backend",
     "backend/assets",
     "backend/assets/characters",
@@ -15,6 +16,14 @@
     "backend/scripts",
     "backend/scripts/api",
     "backend/scripts/core",
-    "backend/scripts/services"
+    "backend/scripts/db",
+    "backend/scripts/services",
+    "frontend",
+    "frontend/src",
+    "frontend/src/components",
+    "frontend/src/router",
+    "frontend/src/stores",
+    "frontend/src/utils",
+    "frontend/src/views"
   ]
 }

@@ -236,18 +236,146 @@
     "hash": "87632f8fbac38358f6a2d8d5dfca129ae9f3df12"
   },
   {
-    "path": "backend/assets/characters/werker/prompts.yaml",
-    "tokens": 709,
-    "ignoreTokens": false,
-    "lines": 35,
-    "mtime": 1781459897.7309017,
-    "hash": "53c7c9f478a0e2a58234b4a11e8acd4266f94294"
-  },
-  {
     "path": "backend/scripts/utils/logger.py",
     "tokens": 388,
     "lines": 52,
     "mtime": 1782314558.1877787,
     "hash": "9e8efca5ec4eb7cee111763a4dd6085174854574"
+  },
+  {
+    "path": "frontend/src/components/AppNavbar.vue",
+    "tokens": 496,
+    "ignoreTokens": false,
+    "lines": 95,
+    "mtime": 1782813554.288543,
+    "hash": "809c58da806bed2c9c3bdd0a64b34a1d898d8e71"
+  },
+  {
+    "path": "frontend/src/components/CharacterCard.vue",
+    "tokens": 1145,
+    "ignoreTokens": false,
+    "lines": 152,
+    "mtime": 1782813554.289547,
+    "hash": "b379bba55bcf4aac6d5b8848b7d8b65c481d911c"
+  },
+  {
+    "path": "frontend/src/components/GraphEditor.vue",
+    "tokens": 4023,
+    "ignoreTokens": false,
+    "lines": 412,
+    "mtime": 1782826856.067553,
+    "hash": "2842a4f1ff56c8bcca586f795c6bdcf2a55dab93"
+  },
+  {
+    "path": "frontend/src/components/TestChatPanel.vue",
+    "tokens": 1668,
+    "ignoreTokens": false,
+    "lines": 267,
+    "mtime": 1782825503.8088846,
+    "hash": "9d9400d7a8a64fc64af8baaf9934ce64cae6374e"
+  },
+  {
+    "path": "frontend/src/router/index.js",
+    "tokens": 169,
+    "ignoreTokens": false,
+    "lines": 19,
+    "mtime": 1782813554.2945485,
+    "hash": "13627a99217fec04165d4b4492cd319881965b7f"
+  },
+  {
+    "path": "frontend/src/components/ValidationBlock.vue",
+    "tokens": 652,
+    "ignoreTokens": false,
+    "lines": 91,
+    "mtime": 1782819155.6585557,
+    "hash": "17f9699602dc4c4766b4d7cda5f1a5c72faea664"
+  },
+  {
+    "path": "frontend/src/stores/navbar.js",
+    "tokens": 109,
+    "ignoreTokens": false,
+    "lines": 20,
+    "mtime": 1782813554.295549,
+    "hash": "3f8bad81acc1d1ec84b0977f241ac5b1f5efc730"
+  },
+  {
+    "path": "frontend/src/utils/chatHistory.js",
+    "tokens": 336,
+    "ignoreTokens": false,
+    "lines": 50,
+    "mtime": 1782900518.7617924,
+    "hash": "4699055019411776519381d0457d71bca229d51f"
+  },
+  {
+    "path": "frontend/src/views/CharacterEditorView.vue",
+    "tokens": 6286,
+    "ignoreTokens": false,
+    "lines": 804,
+    "mtime": 1782826879.863766,
+    "hash": "9b163a16b8d727e074d943ddc8f20b89ea64e9b6"
+  },
+  {
+    "path": "frontend/src/views/CharacterNewView.vue",
+    "tokens": 1343,
+    "ignoreTokens": false,
+    "lines": 225,
+    "mtime": 1782813554.2990263,
+    "hash": "3ceed96bdde2f844ab63b3d3383ba7f3e2e92c4c"
+  },
+  {
+    "path": "frontend/src/views/CharactersView.vue",
+    "tokens": 586,
+    "ignoreTokens": false,
+    "lines": 104,
+    "mtime": 1782900530.5464556,
+    "hash": "a45c3cbf34c7e4eb3de056e743286907e0defe42"
+  },
+  {
+    "path": "frontend/src/views/ChatView.vue",
+    "tokens": 5514,
+    "ignoreTokens": false,
+    "lines": 787,
+    "mtime": 1782900609.118419,
+    "hash": "b4bec6e4a2aa058ee1bb22bde3c8893c99120441"
+  },
+  {
+    "path": "frontend/src/views/HomeView.vue",
+    "tokens": 1244,
+    "ignoreTokens": false,
+    "lines": 204,
+    "mtime": 1782900546.548686,
+    "hash": "62d574882d14804f6305dcc1735c7e9b2401520d"
+  },
+  {
+    "path": "backend/scripts/api/conversation.py",
+    "tokens": 424,
+    "ignoreTokens": false,
+    "lines": 63,
+    "mtime": 1782900311.8358233,
+    "hash": "61fbc18a1c045d9063a99174f0cad6a5b31ba141"
+  },
+  {
+    "path": "backend/scripts/db/conversation_repo.py",
+    "tokens": 697,
+    "ignoreTokens": false,
+    "lines": 94,
+    "mtime": 1782900303.076641,
+    "hash": "f84f27ec624ae3790b13e35adc1116f2966e41fd"
+  },
+  {
+    "path": "backend/scripts/db/database.py",
+    "tokens": 276,
+    "ignoreTokens": false,
+    "lines": 35,
+    "mtime": 1782900291.744645,
+    "hash": "d497e6ccec28fcc520bb89fb5580f2bfbbd37a03"
+  },
+  {
+    "path": "backend/scripts/db/__init__.py",
+    "tokens": 0,
+    "ignoreTokens": false,
+    "lines": 1,
+    "mtime": 1782888369.4594467,
+    "hash": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
   }
 ]

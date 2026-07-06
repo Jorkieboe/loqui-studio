@@ -29,10 +29,14 @@
     "backend/dump/project_reference.md",
     "backend/main.py",
     "backend/scripts/api/character.py",
+    "backend/scripts/api/conversation.py",
     "backend/scripts/core/chatsession.py",
     "backend/scripts/core/context.py",
     "backend/scripts/core/orchestrator.py",
     "backend/scripts/core/session_manager.py",
+    "backend/scripts/db/__init__.py",
+    "backend/scripts/db/conversation_repo.py",
+    "backend/scripts/db/database.py",
     "backend/scripts/services/llm_service.py",
     "backend/scripts/services/ollama_service.py",
     "backend/scripts/services/rag_service.py",
@@ -67,22 +71,6 @@
     "requirements.txt",
     "todo.md"
   ],
-  "unknown_files": [
-    ".claude/CLAUDE.md",
-    ".claude/settings.local.json",
-    "frontend/src/components/AppNavbar.vue",
-    "frontend/src/components/CharacterCard.vue",
-    "frontend/src/components/GraphEditor.vue",
-    "frontend/src/components/TestChatPanel.vue",
-    "frontend/src/components/ValidationBlock.vue",
-    "frontend/src/router/index.js",
-    "frontend/src/stores/navbar.js",
-    "frontend/src/utils/chatHistory.js",
-    "frontend/src/views/CharacterEditorView.vue",
-    "frontend/src/views/CharacterNewView.vue",
-    "frontend/src/views/CharactersView.vue",
-    "frontend/src/views/ChatView.vue",
-    "frontend/src/views/HomeView.vue"
-  ],
-  "total_tokens": 35372
+  "unknown_files": [],
+  "total_tokens": 59631
 }

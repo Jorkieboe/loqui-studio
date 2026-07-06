@@ -132,6 +132,8 @@ async def list_characters():
         return characters
 
     for folder in os.listdir(CHARACTERS_DIR):
+        if folder == "example":
+            continue
         folder_path = os.path.join(CHARACTERS_DIR, folder)
         if os.path.isdir(folder_path):
             info_file = os.path.join(folder_path, "info.json")
