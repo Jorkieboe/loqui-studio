@@ -142,8 +142,5 @@
   },
   {
     "path": "backend/scripts/db/__init__.py"
-  },
-  {
-    "path": "backend/scripts/test_rag.py"
   }
 ]

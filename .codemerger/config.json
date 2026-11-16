@@ -49,7 +49,6 @@
     "backend/scripts/services/tts_service.py",
     "backend/scripts/test_draft_endpoint.py",
     "backend/scripts/test_orchestration.py",
-    "backend/scripts/test_rag.py",
     "backend/scripts/utils/logger.py",
     "concept.md",
     "frontend/index.html",
