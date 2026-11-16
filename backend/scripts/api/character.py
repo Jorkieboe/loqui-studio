@@ -327,14 +327,24 @@ async def test_draft(payload: dict):
 
     active_node_id = session_state.get("active_node_id")
     history = session_state.get("history", [])
+    active_flow_id = session_state.get("active_flow_id", "main")
+    open_topics = session_state.get("open_topics", [])
 
     try:
+        from scripts.core.session_manager import ChatSession
         from scripts.core.orchestrator import run_dialogue_pipeline
+        session_inst = ChatSession(
+            current_node_id=active_node_id,
+            history=history,
+            active_flow_id=active_flow_id,
+            open_topics=open_topics
+        )
         pipeline_result = run_dialogue_pipeline(
             user_input=user_input,
             active_node_id=active_node_id,
             history=history,
-            character_config=draft_config
+            character_config=draft_config,
+            session_instance=session_inst
         )
 
         response_text = ""
@@ -366,7 +376,10 @@ async def test_draft(payload: dict):
             "character": char_name,
             "step": step_val,
             "pov": pov_val,
-            "chunks": chunks_formatted
+            "chunks": chunks_formatted,
+            "active_flow_id": pipeline_result.get("active_flow_id", "main"),
+            "open_topics": pipeline_result.get("open_topics", []),
+            "intent": pipeline_result.get("intent", "resume_current_flow")
         }
 
         return {

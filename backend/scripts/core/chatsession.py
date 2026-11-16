@@ -166,11 +166,12 @@ def traverse_fsm(user_input: str, active_node_id: str, layout: dict, var_prompt:
     if not active_node:
         return None, {}, []
 
-    # Determine transition from current active node
+    # Determine transition from current active node (bridge-node generates dialogue, not auto-skipped)
     is_flow_node = (
-        active_node.get("node_class") == "flow" or
+        (active_node.get("node_class") == "flow" or
         active_node.get("type") in ["start-node", "loop-node", "loop", "cycle-node", "cycle", "end-node", "end"] or
-        active_node.get("id") in ["start", "end"]
+        active_node.get("id") in ["start", "end"]) and
+        active_node.get("type") != "bridge-node"
     )
 
     if is_flow_node:
@@ -187,9 +188,10 @@ def traverse_fsm(user_input: str, active_node_id: str, layout: dict, var_prompt:
             break
 
         is_next_flow = (
-            next_node.get("node_class") == "flow" or
+            (next_node.get("node_class") == "flow" or
             next_node.get("type") in ["start-node", "loop-node", "loop", "cycle-node", "cycle", "end-node", "end"] or
-            next_node.get("id") in ["start", "end"]
+            next_node.get("id") in ["start", "end"]) and
+            next_node.get("type") != "bridge-node"
         )
         if is_next_flow:
             next_node_id = get_automatic_transition(next_node, var_prompt, loop_state)

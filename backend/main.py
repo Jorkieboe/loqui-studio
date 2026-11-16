@@ -111,7 +111,8 @@ async def chat_message(sid, data):
             active_node_id=chatsession.current_node_id,
             history=chatsession.history,
             character_config=char_config,
-            loop_state=loop_state
+            loop_state=loop_state,
+            session_instance=chatsession
         )
 
         chatsession.active_loop_id = loop_state.get("active_loop_id")
@@ -209,7 +210,8 @@ async def audio_message(sid, data):
             active_node_id=chatsession.current_node_id,
             history=chatsession.history,
             character_config=char_config,
-            loop_state=loop_state
+            loop_state=loop_state,
+            session_instance=chatsession
         )
 
         chatsession.active_loop_id = loop_state.get("active_loop_id")

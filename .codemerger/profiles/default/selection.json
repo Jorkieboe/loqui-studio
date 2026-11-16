@@ -139,5 +139,11 @@
   },
   {
     "path": "backend/scripts/tests/test_phase1_schemas.py"
+  },
+  {
+    "path": "backend/scripts/core/intent_dispatcher.py"
+  },
+  {
+    "path": "backend/scripts/tests/test_phase2_dispatcher.py"
   }
 ]

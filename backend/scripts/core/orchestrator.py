@@ -1,8 +1,17 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from scripts.core.chatsession import traverse_fsm
+from scripts.core.session_manager import ChatSession
+from scripts.core.intent_dispatcher import evaluate_intent
 from scripts.services.rag_service import retrieve_hybrid, extract_metadata_categories, rewrite_query
 from scripts.services.llm_service import api_request
 from scripts.utils.logger import PipelineLogger
+
+def assemble_bridge_directive(open_topics: list) -> str:
+    if open_topics:
+        last_topic = open_topics[-1]
+        label = last_topic.get("flow_label") or last_topic.get("flow_id", "previous topic")
+        return f"Wrap up the current topic concisely, then ask the user if they'd like to return to {label}."
+    return "Conclude the current topic concisely and ask the user how else you can help them."
 
 def assemble_system_prompt(
     base_prompt: str,
@@ -56,7 +65,14 @@ def assemble_system_prompt(
 
     return system_prompt
 
-def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Dict[str, str]], character_config: dict, loop_state: dict = None) -> Dict[str, Any]:
+def run_dialogue_pipeline(
+    user_input: str,
+    active_node_id: str,
+    history: List[Dict[str, str]],
+    character_config: dict,
+    loop_state: dict = None,
+    session_instance: Any = None
+) -> Dict[str, Any]:
     """
         get character data, find current node, retrieve relevant information, generate response
     """
@@ -74,15 +90,98 @@ def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Di
     context = prompts.get("context", {})
     var_prompt = prompts.get("var_prompt", [])
 
-    next_node_id, active_node_config, possible_next_nodes = traverse_fsm(
-        user_input=user_input,
-        active_node_id=active_node_id,
-        layout=layout,
-        var_prompt=var_prompt,
-        base_prompt=base_prompt,
-        setting=context.get("setting", ""),
-        loop_state=loop_state
-    )
+    if session_instance is None:
+        session_instance = ChatSession(current_node_id=active_node_id, history=history)
+
+    reactive_nodes = [n for n in var_prompt if n.get("node_class") == "reactive"]
+
+    intent = "resume_current_flow"
+    if reactive_nodes:
+        intent = evaluate_intent(
+            user_input=user_input,
+            history=history,
+            reactive_nodes=reactive_nodes,
+            active_flow=session_instance.active_flow_id,
+            open_topics=session_instance.open_topics
+        )
+
+    PipelineLogger.llm_status(f"Pipeline evaluated intent: '{intent}', current active_flow: '{session_instance.active_flow_id}'")
+
+    bridge_directive = ""
+
+    if intent == "resume_current_flow":
+        next_node_id, active_node_config, possible_next_nodes = traverse_fsm(
+            user_input=user_input,
+            active_node_id=active_node_id,
+            layout=layout,
+            var_prompt=var_prompt,
+            base_prompt=base_prompt,
+            setting=context.get("setting", ""),
+            loop_state=loop_state
+        )
+        if active_node_config and active_node_config.get("type") == "bridge-node":
+            bridge_directive = assemble_bridge_directive(session_instance.open_topics)
+            session_instance.active_flow_id = "main"
+    else:
+        matched_node = next((n for n in reactive_nodes if n.get("id") == intent), None)
+        if matched_node and matched_node.get("mode") == "standalone":
+            active_node_config = matched_node
+            next_node_id = active_node_id
+            possible_next_nodes = []
+        elif matched_node:
+            shelved_idx = next(
+                (i for i, t in enumerate(session_instance.open_topics) if t.get("flow_id") == intent),
+                None
+            )
+            if shelved_idx is not None:
+                shelved = session_instance.open_topics.pop(shelved_idx)
+                if session_instance.active_flow_id and session_instance.active_flow_id != "main" and session_instance.active_flow_id != intent:
+                    curr_node = next((n for n in reactive_nodes if n.get("id") == session_instance.active_flow_id), None)
+                    curr_label = curr_node.get("flow_label", session_instance.active_flow_id) if curr_node else session_instance.active_flow_id
+                    session_instance.open_topics.append({
+                        "flow_id": session_instance.active_flow_id,
+                        "flow_label": curr_label,
+                        "paused_node_id": active_node_id
+                    })
+                session_instance.active_flow_id = intent
+                resume_target = shelved.get("paused_node_id") or intent
+                target_config = next((n for n in var_prompt if n.get("id") == resume_target), matched_node)
+                active_node_config = target_config
+                next_trans = active_node_config.get("next", [])
+                if isinstance(next_trans, list) and next_trans:
+                    first = next_trans[0]
+                    next_node_id = first.get("target") if isinstance(first, dict) else first
+                else:
+                    next_node_id = active_node_config.get("id")
+                possible_next_nodes = [t.get("target") for t in next_trans if isinstance(t, dict) and t.get("target")]
+            else:
+                if session_instance.active_flow_id and session_instance.active_flow_id != "main" and session_instance.active_flow_id != intent:
+                    curr_node = next((n for n in reactive_nodes if n.get("id") == session_instance.active_flow_id), None)
+                    curr_label = curr_node.get("flow_label", session_instance.active_flow_id) if curr_node else session_instance.active_flow_id
+                    session_instance.open_topics.append({
+                        "flow_id": session_instance.active_flow_id,
+                        "flow_label": curr_label,
+                        "paused_node_id": active_node_id
+                    })
+                session_instance.active_flow_id = intent
+                active_node_config = matched_node
+                next_trans = active_node_config.get("next", [])
+                if isinstance(next_trans, list) and next_trans:
+                    first = next_trans[0]
+                    next_node_id = first.get("target") if isinstance(first, dict) else first
+                else:
+                    next_node_id = active_node_config.get("id")
+                possible_next_nodes = [t.get("target") for t in next_trans if isinstance(t, dict) and t.get("target")]
+        else:
+            next_node_id, active_node_config, possible_next_nodes = traverse_fsm(
+                user_input=user_input,
+                active_node_id=active_node_id,
+                layout=layout,
+                var_prompt=var_prompt,
+                base_prompt=base_prompt,
+                setting=context.get("setting", ""),
+                loop_state=loop_state
+            )
 
     retrieved_chunks = []
     metadata_categories = {}
@@ -127,6 +226,9 @@ def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Di
         active_node_config=active_node_config
     )
 
+    if bridge_directive:
+        system_prompt += f"BRIDGE DIRECTIVE:\n{bridge_directive}\n\n"
+
     api_messages = [{"role": "system", "content": system_prompt}]
     for turn in history:
         if isinstance(turn, str):
@@ -159,5 +261,8 @@ def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Di
         "possible_next_nodes": possible_next_nodes,
         "response_stream": response_stream,
         "retrieved_chunks": retrieved_chunks,
-        "metadata_categories": metadata_categories
+        "metadata_categories": metadata_categories,
+        "active_flow_id": session_instance.active_flow_id,
+        "open_topics": session_instance.open_topics,
+        "intent": intent
     }
