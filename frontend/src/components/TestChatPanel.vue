@@ -11,6 +11,11 @@ const sessionState = defineModel('sessionState', { default: () => ({ active_node
 const input   = ref('')
 const loading = ref(false)
 const chatEl  = ref(null)
+const expandedIndex = ref(null)
+
+function toggleDebug(index) {
+  expandedIndex.value = expandedIndex.value === index ? null : index
+}
 
 async function send() {
   const text = input.value.trim()
@@ -40,7 +45,22 @@ async function send() {
     if (!res.ok) {
       messages.value = [...messages.value, { role: 'assistant', text: `Error: ${data.detail || 'Unknown error'}`, error: true }]
     } else {
-      messages.value = [...messages.value, { role: 'assistant', text: data.text }]
+      const debugPayload = data.debug || {
+        character: data.character,
+        step: data.step,
+        pov: data.pov,
+        chunks: data.chunks || [],
+      }
+
+      messages.value = [
+        ...messages.value,
+        {
+          role: 'assistant',
+          text: data.text,
+          debug: debugPayload,
+        }
+      ]
+
       sessionState.value = {
         active_node_id: data.next_node_id,
         history: [...sessionState.value.history, { role: 'user', text }, { role: 'assistant', text: data.text }],
@@ -57,6 +77,7 @@ async function send() {
 function resetChat() {
   messages.value = []
   sessionState.value = { active_node_id: null, history: [] }
+  expandedIndex.value = null
 }
 
 async function scrollToBottom() {
@@ -84,10 +105,52 @@ function onKeydown(e) {
       <div
         v-for="(msg, i) in messages"
         :key="i"
-        class="message"
+        class="message-item"
         :class="msg.role"
       >
-        <div class="bubble" :class="{ error: msg.error }">{{ msg.text }}</div>
+        <div class="message" :class="msg.role">
+          <div
+            class="bubble"
+            :class="{ error: msg.error, 'has-debug': !!msg.debug }"
+            @click="msg.debug ? toggleDebug(i) : null"
+          >
+            {{ msg.text }}
+            <span v-if="msg.debug" class="debug-toggle-indicator">
+              {{ expandedIndex === i ? '▲ hide info' : '▼ debug info' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Debug details drawer beneath the clicked message -->
+        <div v-if="msg.debug && expandedIndex === i" class="debug-drawer">
+          <div class="debug-row">
+            <span class="debug-key">Character:</span>
+            <span class="debug-val">{{ msg.debug.character || 'N/A' }}</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-key">Step:</span>
+            <span class="debug-val step-tag">{{ msg.debug.step || 'N/A' }}</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-key">POV:</span>
+            <span class="debug-val">{{ msg.debug.pov === null ? 'None' : msg.debug.pov }}</span>
+          </div>
+
+          <div class="debug-chunks-header">
+            <span>RAG Chunks ({{ msg.debug.chunks ? msg.debug.chunks.length : 0 }}):</span>
+          </div>
+
+          <div v-if="!msg.debug.chunks || !msg.debug.chunks.length" class="debug-empty">
+            No chunks retrieved
+          </div>
+
+          <div v-else class="debug-chunks-list">
+            <div v-for="(chunk, cIdx) in msg.debug.chunks" :key="cIdx" class="debug-chunk-box">
+              <div class="chunk-id-tag">ID: {{ chunk.id || 'N/A' }}</div>
+              <div class="chunk-body-text">{{ chunk.text }}</div>
+            </div>
+          </div>
+        </div>
       </div>
       <div v-if="loading" class="message assistant">
         <div class="bubble typing">
@@ -174,12 +237,18 @@ function onKeydown(e) {
   justify-content: flex-end;
 }
 
+.message-item {
+  display: flex;
+  flex-direction: column;
+}
+
 .bubble {
   max-width: 85%;
   padding: 0.6rem 0.9rem;
   border-radius: var(--radius);
   font-size: 0.88rem;
   line-height: 1.45;
+  position: relative;
 }
 
 .message.user .bubble {
@@ -193,9 +262,114 @@ function onKeydown(e) {
   color: var(--text);
 }
 
+.bubble.has-debug {
+  cursor: pointer;
+  transition: box-shadow 0.15s, background-color 0.15s;
+}
+
+.bubble.has-debug:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.debug-toggle-indicator {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--primary-dark);
+  text-align: right;
+  margin-top: 0.35rem;
+  opacity: 0.85;
+}
+
 .bubble.error {
   background: #ffe4e4;
   color: #c0392b;
+}
+
+/* ── Debug Drawer beneath the message ── */
+.debug-drawer {
+  background: #fdfdfd;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.75rem;
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.debug-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.debug-key {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.debug-val {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.step-tag {
+  background: #eef2ff;
+  color: #4f46e5;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.debug-chunks-header {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+  border-top: 1px dashed var(--border);
+  padding-top: 0.4rem;
+}
+
+.debug-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.75rem;
+}
+
+.debug-chunks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+}
+
+.debug-chunk-box {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 0.4rem 0.55rem;
+}
+
+.chunk-id-tag {
+  font-family: monospace;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #0284c7;
+  margin-bottom: 0.2rem;
+  word-break: break-all;
+}
+
+.chunk-body-text {
+  font-size: 0.75rem;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .typing {

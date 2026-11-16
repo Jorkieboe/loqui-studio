@@ -151,8 +151,11 @@ def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Di
 
     response_stream = api_request(api_messages, stream=True)
 
+    active_step_id = active_node_config.get("id") if active_node_config else active_node_id
+
     return {
         "next_node_id": next_node_id,
+        "active_step": active_step_id,
         "possible_next_nodes": possible_next_nodes,
         "response_stream": response_stream,
         "retrieved_chunks": retrieved_chunks,

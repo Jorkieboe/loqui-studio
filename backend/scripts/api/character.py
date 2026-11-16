@@ -341,12 +341,45 @@ async def test_draft(payload: dict):
         for chunk in pipeline_result["response_stream"]:
             response_text += chunk
 
+        char_name = info.get("name") or info.get("id") or "character"
+        rag_settings = info.get("rag", {})
+        pov_val = rag_settings.get("pov")
+        if pov_val is None or str(pov_val).strip().lower() in ["none", "null", ""]:
+            pov_val = None
+
+        chunks_formatted = []
+        for rc in pipeline_result.get("retrieved_chunks", []):
+            if isinstance(rc, dict):
+                chunks_formatted.append({
+                    "id": rc.get("chunk_id") or rc.get("id") or "",
+                    "text": rc.get("text_content") or rc.get("text") or ""
+                })
+            else:
+                chunks_formatted.append({
+                    "id": "",
+                    "text": str(rc)
+                })
+
+        step_val = pipeline_result.get("active_step") or active_node_id or "start"
+
+        debug_payload = {
+            "character": char_name,
+            "step": step_val,
+            "pov": pov_val,
+            "chunks": chunks_formatted
+        }
+
         return {
             "status": "success",
             "text": response_text,
             "next_node_id": pipeline_result["next_node_id"],
             "retrieved_chunks": pipeline_result["retrieved_chunks"],
-            "metadata_categories": pipeline_result["metadata_categories"]
+            "metadata_categories": pipeline_result["metadata_categories"],
+            "character": char_name,
+            "step": step_val,
+            "pov": pov_val,
+            "chunks": chunks_formatted,
+            "debug": debug_payload
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Pipeline execution failed: {str(e)}")
