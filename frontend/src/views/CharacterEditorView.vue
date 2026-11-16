@@ -359,7 +359,10 @@ onBeforeUnmount(() => {
             </div>
             <div class="field">
               <label>Point of view</label>
-              <input v-model="info.rag.pov" type="text" placeholder="e.g. jan_zizka" />
+              <input v-model="info.rag.pov" type="text" list="pov-options" placeholder="e.g. jan_zizka or None" />
+              <datalist id="pov-options">
+                <option value="None">None (skip POV filtering)</option>
+              </datalist>
             </div>
           </section>
           </div><!-- /form-inner -->

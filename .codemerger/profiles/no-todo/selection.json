@@ -1,381 +1,149 @@
 [
   {
-    "path": "backend/config.json",
-    "tokens": 190,
-    "ignoreTokens": false,
-    "lines": 23,
-    "mtime": 1782312940.4149785,
-    "hash": "432e728b7674e95ba910827a864df6491da6f4d7"
+    "path": "backend/config.json"
   },
   {
-    "path": "backend/main.py",
-    "tokens": 1885,
-    "ignoreTokens": false,
-    "lines": 249,
-    "mtime": 1782314558.4157388,
-    "hash": "2cbe537e0340a922ae495424052c181b8ecd0225"
+    "path": "backend/main.py"
   },
   {
-    "path": "frontend/src/App.vue",
-    "tokens": 2118,
-    "ignoreTokens": false,
-    "lines": 338,
-    "mtime": 1782400929.9811535,
-    "hash": "099d3eaddc916146b7e3c975cdf8eff3606980bd"
+    "path": "frontend/src/App.vue"
   },
   {
-    "path": "frontend/src/main.js",
-    "tokens": 45,
-    "ignoreTokens": false,
-    "lines": 7,
-    "mtime": 1781033245.5870197,
-    "hash": "51565fd50344f2d6fc37c656870fd5a4153fe045"
+    "path": "frontend/src/main.js"
   },
   {
-    "path": "frontend/index.html",
-    "tokens": 92,
-    "ignoreTokens": false,
-    "lines": 12,
-    "mtime": 1781033245.5230684,
-    "hash": "50fbad637cf09cc8be14f91e6a39be66d66be401"
+    "path": "frontend/index.html"
   },
   {
-    "path": "frontend/jsconfig.json",
-    "tokens": 88,
-    "ignoreTokens": false,
-    "lines": 13,
-    "mtime": 1781033245.458656,
-    "hash": "0b91a462a9945c5efe84bc226649ab0501cf567f"
+    "path": "frontend/jsconfig.json"
   },
   {
-    "path": "frontend/vite.config.mjs",
-    "tokens": 172,
-    "ignoreTokens": false,
-    "lines": 27,
-    "mtime": 1781033245.3892832,
-    "hash": "9c7b0892095553fd2484e4a2cffc614194657493"
+    "path": "frontend/vite.config.mjs"
   },
   {
-    "path": "2do.txt",
-    "tokens": 35,
-    "ignoreTokens": false,
-    "lines": 4,
-    "mtime": 1781032578.7253697,
-    "hash": "e46814ac9412bb023b802d66528d1e2055fae4e6"
+    "path": "2do.txt"
   },
   {
-    "path": "architecture.md",
-    "tokens": 5962,
-    "ignoreTokens": false,
-    "lines": 551,
-    "mtime": 1781032578.7326238,
-    "hash": "16257137ed8ff2104a8f04a4a4d21e782203504f"
+    "path": "architecture.md"
   },
   {
-    "path": "concept.md",
-    "tokens": 4363,
-    "ignoreTokens": false,
-    "lines": 190,
-    "mtime": 1781032578.7302687,
-    "hash": "d47689476466e40db63ff41e1d550ff872b2aa91"
+    "path": "concept.md"
   },
   {
-    "path": "go.bat",
-    "tokens": 592,
-    "ignoreTokens": false,
-    "lines": 86,
-    "mtime": 1781033679.7590935,
-    "hash": "f272c6ab908e2d45046d56774a7efe2d5d90c920"
+    "path": "go.bat"
   },
   {
-    "path": "llm.md",
-    "tokens": 254,
-    "ignoreTokens": false,
-    "lines": 15,
-    "mtime": 1781032578.7263699,
-    "hash": "b544ad6462322333114478c86b307f42a506cdf5"
+    "path": "llm.md"
   },
   {
-    "path": "package.json",
-    "tokens": 293,
-    "ignoreTokens": false,
-    "lines": 28,
-    "mtime": 1781034489.8851547,
-    "hash": "fcbd95f6c4f58a94eedefea13f32baa9e6f6d5b8"
+    "path": "package.json"
   },
   {
-    "path": "README.md",
-    "tokens": 443,
-    "ignoreTokens": false,
-    "lines": 53,
-    "mtime": 1781032578.7243433,
-    "hash": "3dedc27c7721420bc3bbd8d080aaa5c5cb0c5dfa"
+    "path": "README.md"
   },
   {
-    "path": "requirements.txt",
-    "tokens": 169,
-    "ignoreTokens": false,
-    "lines": 18,
-    "mtime": 1782397983.1967363,
-    "hash": "9aed8213ff8a95aa36a358818676b8c3fa51337e"
+    "path": "requirements.txt"
   },
   {
-    "path": "backend/scripts/core/session_manager.py",
-    "tokens": 242,
-    "lines": 33,
-    "mtime": 1781169462.7720907,
-    "hash": "60175397d18f7d7ed3a5cfbea0a5752b8c679e06"
+    "path": "backend/scripts/core/session_manager.py"
   },
   {
-    "path": "backend/scripts/core/orchestrator.py",
-    "tokens": 1370,
-    "lines": 156,
-    "mtime": 1782314558.5227797,
-    "hash": "c7d37729836e50796dff022677bbdd52fa13df66"
+    "path": "backend/scripts/core/orchestrator.py"
   },
   {
-    "path": "backend/scripts/core/chatsession.py",
-    "tokens": 1941,
-    "lines": 219,
-    "mtime": 1781169462.8695993,
-    "hash": "085d18885403a95a55235002a2de94af58992cb7"
+    "path": "backend/scripts/core/chatsession.py"
   },
   {
-    "path": "backend/assets/characters/example/layout.json",
-    "tokens": 200,
-    "ignoreTokens": false,
-    "lines": 38,
-    "mtime": 1781095508.3758726,
-    "hash": "8371570bf1284e27ef6177797c0c8bc55593a113"
+    "path": "backend/assets/characters/example/layout.json"
   },
   {
-    "path": "backend/assets/characters/example/info.json",
-    "tokens": 115,
-    "ignoreTokens": false,
-    "lines": 18,
-    "mtime": 1781095508.3738563,
-    "hash": "73dd2abfa906e8df89f1bfcaff0a1d835e07169a"
+    "path": "backend/assets/characters/example/info.json"
   },
   {
-    "path": "backend/assets/characters/example/prompts.yaml",
-    "tokens": 207,
-    "ignoreTokens": false,
-    "lines": 30,
-    "mtime": 1781095508.3748655,
-    "hash": "f4bf9c3ed0afe7aa1a574cd557f283dd1f82493a"
+    "path": "backend/assets/characters/example/prompts.yaml"
   },
   {
-    "path": "backend/scripts/api/character.py",
-    "tokens": 3149,
-    "ignoreTokens": false,
-    "lines": 390,
-    "mtime": 1781104343.5187304,
-    "hash": "04f43ff3b1fbc0d190a8cd70561b9cf0b0a499bc"
+    "path": "backend/scripts/api/character.py"
   },
   {
-    "path": "backend/scripts/core/context.py",
-    "tokens": 128,
-    "ignoreTokens": false,
-    "lines": 16,
-    "mtime": 1781104342.9560342,
-    "hash": "0ec3917cad0532ee2c171c562b96237dfa2f364d"
+    "path": "backend/scripts/core/context.py"
   },
   {
-    "path": "backend/scripts/test_orchestration.py",
-    "tokens": 894,
-    "ignoreTokens": false,
-    "lines": 118,
-    "mtime": 1781104343.4262495,
-    "hash": "de5572667c722a1c9a3525a9176631e456aad6ed"
+    "path": "backend/scripts/test_orchestration.py"
   },
   {
-    "path": "backend/scripts/test_draft_endpoint.py",
-    "tokens": 1094,
-    "ignoreTokens": false,
-    "lines": 140,
-    "mtime": 1781107073.3489819,
-    "hash": "1a4645b49c9ae1871b8f5f230d6e935356e58fa3"
+    "path": "backend/scripts/test_draft_endpoint.py"
   },
   {
-    "path": "backend/scripts/services/transcription_service.py",
-    "tokens": 644,
-    "ignoreTokens": false,
-    "lines": 90,
-    "mtime": 1782314558.7331302,
-    "hash": "ae192f097c9aa4b703beee034103672e12e685f1"
+    "path": "backend/scripts/services/transcription_service.py"
   },
   {
-    "path": "backend/scripts/services/tts_service.py",
-    "tokens": 632,
-    "ignoreTokens": false,
-    "lines": 88,
-    "mtime": 1781104343.1248834,
-    "hash": "74e156933032b1123a4a8fa1daa7984c9f76a040"
+    "path": "backend/scripts/services/tts_service.py"
   },
   {
-    "path": "backend/scripts/services/rag_service.py",
-    "tokens": 4071,
-    "ignoreTokens": false,
-    "lines": 395,
-    "mtime": 1782397983.2935555,
-    "hash": "6448c9f80d5b3cc0c611cb370afd1c1270a5c6ca"
+    "path": "backend/scripts/services/rag_service.py"
   },
   {
-    "path": "backend/scripts/services/llm_service.py",
-    "tokens": 1613,
-    "ignoreTokens": false,
-    "lines": 170,
-    "mtime": 1782314558.8525038,
-    "hash": "162e68ee6e8c563a25b86cc91bd16d6bddf8a22c"
+    "path": "backend/scripts/services/llm_service.py"
   },
   {
-    "path": "backend/scripts/services/ollama_service.py",
-    "tokens": 1274,
-    "lines": 149,
-    "mtime": 1782312940.5162537,
-    "hash": "87632f8fbac38358f6a2d8d5dfca129ae9f3df12"
+    "path": "backend/scripts/services/ollama_service.py"
   },
   {
-    "path": "backend/scripts/utils/logger.py",
-    "tokens": 388,
-    "lines": 52,
-    "mtime": 1782314558.1877787,
-    "hash": "9e8efca5ec4eb7cee111763a4dd6085174854574"
+    "path": "backend/scripts/utils/logger.py"
   },
   {
-    "path": "frontend/src/components/AppNavbar.vue",
-    "tokens": 496,
-    "ignoreTokens": false,
-    "lines": 95,
-    "mtime": 1782813554.288543,
-    "hash": "809c58da806bed2c9c3bdd0a64b34a1d898d8e71"
+    "path": "frontend/src/components/AppNavbar.vue"
   },
   {
-    "path": "frontend/src/components/CharacterCard.vue",
-    "tokens": 1145,
-    "ignoreTokens": false,
-    "lines": 152,
-    "mtime": 1782813554.289547,
-    "hash": "b379bba55bcf4aac6d5b8848b7d8b65c481d911c"
+    "path": "frontend/src/components/CharacterCard.vue"
   },
   {
-    "path": "frontend/src/components/GraphEditor.vue",
-    "tokens": 4023,
-    "ignoreTokens": false,
-    "lines": 412,
-    "mtime": 1782826856.067553,
-    "hash": "2842a4f1ff56c8bcca586f795c6bdcf2a55dab93"
+    "path": "frontend/src/components/GraphEditor.vue"
   },
   {
-    "path": "frontend/src/components/TestChatPanel.vue",
-    "tokens": 1668,
-    "ignoreTokens": false,
-    "lines": 267,
-    "mtime": 1782825503.8088846,
-    "hash": "9d9400d7a8a64fc64af8baaf9934ce64cae6374e"
+    "path": "frontend/src/components/TestChatPanel.vue"
   },
   {
-    "path": "frontend/src/router/index.js",
-    "tokens": 169,
-    "ignoreTokens": false,
-    "lines": 19,
-    "mtime": 1782813554.2945485,
-    "hash": "13627a99217fec04165d4b4492cd319881965b7f"
+    "path": "frontend/src/router/index.js"
   },
   {
-    "path": "frontend/src/components/ValidationBlock.vue",
-    "tokens": 652,
-    "ignoreTokens": false,
-    "lines": 91,
-    "mtime": 1782819155.6585557,
-    "hash": "17f9699602dc4c4766b4d7cda5f1a5c72faea664"
+    "path": "frontend/src/components/ValidationBlock.vue"
   },
   {
-    "path": "frontend/src/stores/navbar.js",
-    "tokens": 109,
-    "ignoreTokens": false,
-    "lines": 20,
-    "mtime": 1782813554.295549,
-    "hash": "3f8bad81acc1d1ec84b0977f241ac5b1f5efc730"
+    "path": "frontend/src/stores/navbar.js"
   },
   {
-    "path": "frontend/src/utils/chatHistory.js",
-    "tokens": 336,
-    "ignoreTokens": false,
-    "lines": 50,
-    "mtime": 1782900518.7617924,
-    "hash": "4699055019411776519381d0457d71bca229d51f"
+    "path": "frontend/src/utils/chatHistory.js"
   },
   {
-    "path": "frontend/src/views/CharacterEditorView.vue",
-    "tokens": 6286,
-    "ignoreTokens": false,
-    "lines": 804,
-    "mtime": 1782826879.863766,
-    "hash": "9b163a16b8d727e074d943ddc8f20b89ea64e9b6"
+    "path": "frontend/src/views/CharacterEditorView.vue"
   },
   {
-    "path": "frontend/src/views/CharacterNewView.vue",
-    "tokens": 1343,
-    "ignoreTokens": false,
-    "lines": 225,
-    "mtime": 1782813554.2990263,
-    "hash": "3ceed96bdde2f844ab63b3d3383ba7f3e2e92c4c"
+    "path": "frontend/src/views/CharacterNewView.vue"
   },
   {
-    "path": "frontend/src/views/CharactersView.vue",
-    "tokens": 586,
-    "ignoreTokens": false,
-    "lines": 104,
-    "mtime": 1782900530.5464556,
-    "hash": "a45c3cbf34c7e4eb3de056e743286907e0defe42"
+    "path": "frontend/src/views/CharactersView.vue"
   },
   {
-    "path": "frontend/src/views/ChatView.vue",
-    "tokens": 5514,
-    "ignoreTokens": false,
-    "lines": 787,
-    "mtime": 1782900609.118419,
-    "hash": "b4bec6e4a2aa058ee1bb22bde3c8893c99120441"
+    "path": "frontend/src/views/ChatView.vue"
   },
   {
-    "path": "frontend/src/views/HomeView.vue",
-    "tokens": 1244,
-    "ignoreTokens": false,
-    "lines": 204,
-    "mtime": 1782900546.548686,
-    "hash": "62d574882d14804f6305dcc1735c7e9b2401520d"
+    "path": "frontend/src/views/HomeView.vue"
   },
   {
-    "path": "backend/scripts/api/conversation.py",
-    "tokens": 424,
-    "ignoreTokens": false,
-    "lines": 63,
-    "mtime": 1782900311.8358233,
-    "hash": "61fbc18a1c045d9063a99174f0cad6a5b31ba141"
+    "path": "backend/scripts/api/conversation.py"
   },
   {
-    "path": "backend/scripts/db/conversation_repo.py",
-    "tokens": 697,
-    "ignoreTokens": false,
-    "lines": 94,
-    "mtime": 1782900303.076641,
-    "hash": "f84f27ec624ae3790b13e35adc1116f2966e41fd"
+    "path": "backend/scripts/db/conversation_repo.py"
   },
   {
-    "path": "backend/scripts/db/database.py",
-    "tokens": 276,
-    "ignoreTokens": false,
-    "lines": 35,
-    "mtime": 1782900291.744645,
-    "hash": "d497e6ccec28fcc520bb89fb5580f2bfbbd37a03"
+    "path": "backend/scripts/db/database.py"
   },
   {
-    "path": "backend/scripts/db/__init__.py",
-    "tokens": 0,
-    "ignoreTokens": false,
-    "lines": 1,
-    "mtime": 1782888369.4594467,
-    "hash": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    "path": "backend/scripts/db/__init__.py"
+  },
+  {
+    "path": "backend/scripts/test_rag.py"
   }
 ]

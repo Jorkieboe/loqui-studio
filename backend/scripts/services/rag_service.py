@@ -80,6 +80,91 @@ def init_rag_schemes():
 
 init_rag_schemes()
 
+def get_available_rag_schemes() -> List[str]:
+    if not os.path.exists(RAG_SCHEMES_DIR):
+        return []
+    schemes = [
+        d for d in os.listdir(RAG_SCHEMES_DIR)
+        if os.path.isdir(os.path.join(RAG_SCHEMES_DIR, d))
+    ]
+    return sorted(schemes)
+
+def normalize_chunk(raw_chunk: Any, fallback_idx: int = 0) -> Dict[str, Any]:
+    if isinstance(raw_chunk, str):
+        return {
+            "id": f"chunk_{fallback_idx}",
+            "chunk_id": f"chunk_{fallback_idx}",
+            "text": raw_chunk,
+            "text_content": raw_chunk,
+            "pov": ["all"],
+            "metadata": {}
+        }
+
+    if not isinstance(raw_chunk, dict):
+        text_val = str(raw_chunk)
+        return {
+            "id": f"chunk_{fallback_idx}",
+            "chunk_id": f"chunk_{fallback_idx}",
+            "text": text_val,
+            "text_content": text_val,
+            "pov": ["all"],
+            "metadata": {}
+        }
+
+    chunk = dict(raw_chunk)
+
+    # Resolve ID
+    cid = chunk.get("chunk_id") or chunk.get("id") or f"chunk_{fallback_idx}"
+    chunk["id"] = cid
+    chunk["chunk_id"] = cid
+
+    # Resolve Text
+    text = chunk.get("text_content") or chunk.get("text") or ""
+    chunk["text"] = text
+    chunk["text_content"] = text
+
+    # Resolve Metadata
+    meta = chunk.get("metadata", {})
+    if isinstance(meta, str):
+        try:
+            parsed_meta = json.loads(meta)
+            meta = parsed_meta if isinstance(parsed_meta, dict) else {"raw": parsed_meta}
+        except Exception:
+            meta = {"raw": meta}
+    elif not isinstance(meta, dict):
+        meta = {}
+    chunk["metadata"] = meta
+
+    # Resolve POV
+    pov = chunk.get("pov")
+    if pov is None and isinstance(meta, dict) and "pov" in meta:
+        pov = meta.get("pov")
+
+    if pov is None or pov == "":
+        pov_list = ["all"]
+    elif isinstance(pov, str):
+        try:
+            parsed_pov = json.loads(pov)
+            if isinstance(parsed_pov, dict) and "pov" in parsed_pov:
+                p = parsed_pov["pov"]
+                pov_list = p if isinstance(p, list) else [str(p)]
+            elif isinstance(parsed_pov, list):
+                pov_list = [str(x) for x in parsed_pov]
+            else:
+                pov_list = [str(parsed_pov)]
+        except Exception:
+            pov_list = [pov.strip()]
+    elif isinstance(pov, dict):
+        p = pov.get("pov", ["all"])
+        pov_list = p if isinstance(p, list) else [str(p)]
+    elif isinstance(pov, list):
+        pov_list = [str(x) for x in pov]
+    else:
+        pov_list = [str(pov)]
+
+    chunk["pov"] = pov_list if pov_list else ["all"]
+    return chunk
+
 def get_embedding(text: str) -> List[float]:
     ollama_cfg = load_ollama_config()
     ollama_active = ollama_cfg.get("embedding_enabled", True) and is_ollama_available()
@@ -126,9 +211,20 @@ class RAGIndex:
         self.load_index()
 
     def load_index(self):
+        available_schemes = get_available_rag_schemes()
+        if not os.path.exists(self.scheme_dir):
+            PipelineLogger.rag(
+                f"Scheme directory '{self.scheme_id}' not found in {RAG_SCHEMES_DIR}. "
+                f"Available schemes: {available_schemes}"
+            )
+            return
+
         metadata_path = os.path.join(self.scheme_dir, "db_metadata.json")
         if not os.path.exists(metadata_path):
-            PipelineLogger.rag(f"Metadata file not found at: {metadata_path}")
+            PipelineLogger.rag(
+                f"Metadata file not found at: {metadata_path}. "
+                f"Available schemes in {RAG_SCHEMES_DIR}: {available_schemes}"
+            )
             return
         try:
             self.last_loaded_time = os.path.getmtime(metadata_path)
@@ -142,26 +238,11 @@ class RAGIndex:
                     raw_chunks = data_loaded["chunks"]
                 else:
                     raw_chunks = list(data_loaded.values())
-            self.chunks = []
-            for i, chunk in enumerate(raw_chunks):
-                if isinstance(chunk, str):
-                    self.chunks.append({
-                        "id": f"chunk_{i}",
-                        "text": chunk,
-                        "pov": ["all"],
-                        "metadata": {}
-                    })
-                elif isinstance(chunk, dict):
-                    if "id" not in chunk:
-                        chunk["id"] = f"chunk_{i}"
-                    if "text" not in chunk:
-                        chunk["text"] = ""
-                    if "pov" not in chunk:
-                        chunk["pov"] = ["all"]
-                    if "metadata" not in chunk:
-                        chunk["metadata"] = {}
-                    self.chunks.append(chunk)
-            PipelineLogger.rag(f"Successfully loaded {len(self.chunks)} chunks for scheme '{self.scheme_id}'.")
+            normalized_chunks = [normalize_chunk(c, i) for i, c in enumerate(raw_chunks)]
+            if normalized_chunks and all("vector_index" in c and isinstance(c["vector_index"], int) for c in normalized_chunks):
+                normalized_chunks.sort(key=lambda x: x["vector_index"])
+            self.chunks = normalized_chunks
+            PipelineLogger.rag(f"Successfully loaded and normalized {len(self.chunks)} chunks for scheme '{self.scheme_id}'.")
         except Exception as e:
             PipelineLogger.error(f"Failed to load RAG metadata for {self.scheme_id}", e)
             return
@@ -190,8 +271,8 @@ class RAGIndex:
                 PipelineLogger.rag("FAISS database file not found. Generating a new one in-memory...")
                 embeddings = []
                 for chunk in self.chunks:
-                    text_val = chunk.get("text", "")
-                    emb = get_embedding(text_val)
+                    embed_text = chunk.get("breadcrumb") or chunk.get("text_content") or chunk.get("text", "")
+                    emb = get_embedding(embed_text)
                     embeddings.append(emb)
                 if embeddings:
                     emb_matrix = np.array(embeddings, dtype=np.float32)
@@ -228,6 +309,8 @@ _index_cache = {}
 
 def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: int = 4) -> List[Dict[str, Any]]:
     global _index_cache
+    available_schemes = get_available_rag_schemes()
+    PipelineLogger.rag(f"Available schemes in {RAG_SCHEMES_DIR}: {available_schemes}")
     PipelineLogger.rag(f"Initiating hybrid retrieval. Query: '{query}', Scheme: '{scheme_id}', POV Filter: '{pov_filter}', Top K: {top_k}")
     if scheme_id not in _index_cache:
         PipelineLogger.rag(f"Scheme '{scheme_id}' not found in cache. Initializing...")
@@ -290,8 +373,11 @@ def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: 
             seen_ids.add(cid)
             candidate_hits.append(chunk)
 
+    skip_pov = pov_filter is None or str(pov_filter).strip().lower() in ["none", "null", ""]
     pov_hits = []
-    if candidate_hits:
+    if skip_pov:
+        PipelineLogger.rag(f"POV filter is '{pov_filter}'. Skipping POV filtering entirely.")
+    elif candidate_hits:
         matching = []
         non_matching = []
         for chunk in candidate_hits:
@@ -319,7 +405,8 @@ def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: 
 
     add_to_rrf(faiss_hits)
     add_to_rrf(bm25_hits)
-    add_to_rrf(pov_hits)
+    if not skip_pov:
+        add_to_rrf(pov_hits)
 
     sorted_rrf = sorted(rrf_scores.values(), key=lambda x: x["score"], reverse=True)
     PipelineLogger.rag(f"Reciprocal Rank Fusion computed for {len(rrf_scores)} unique chunks.")
@@ -341,22 +428,27 @@ def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: 
     return results
 
 def extract_metadata_categories(chunks: List[Dict[str, Any]]) -> Dict[str, List[str]]:
-    categories = {
-        "locations": set(),
-        "tactics": set(),
-        "dates": set()
-    }
+    categories = {}
     for chunk in chunks:
         if not isinstance(chunk, dict):
             continue
         meta = chunk.get("metadata", {})
+        if isinstance(meta, str):
+            try:
+                meta = json.loads(meta)
+            except Exception:
+                meta = {}
         if not isinstance(meta, dict):
-            meta = {}
-        for key in ["locations", "tactics", "dates"]:
-            vals = meta.get(key, [])
-            if isinstance(vals, list):
-                for val in vals:
-                    categories[key].add(str(val))
+            continue
+        for key, val in meta.items():
+            if key not in categories:
+                categories[key] = set()
+            if isinstance(val, list):
+                for v in val:
+                    if v is not None:
+                        categories[key].add(str(v))
+            elif isinstance(val, (str, int, float, bool)):
+                categories[key].add(str(val))
     return {k: sorted(list(v)) for k, v in categories.items()}
 
 def rewrite_query(user_message: str, history: List[Dict[str, str]]) -> str:
@@ -386,7 +478,7 @@ def rewrite_query(user_message: str, history: List[Dict[str, str]]) -> str:
         Rewritten Query:
     """
     try:
-        
+
         rewritten = api_request([{"role": "user", "content": prompt}], stream=False)
         if rewritten and isinstance(rewritten, str):
             PipelineLogger.rag(rewritten.strip())

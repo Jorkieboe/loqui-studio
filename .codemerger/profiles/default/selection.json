@@ -1,178 +1,77 @@
 [
   {
-    "path": "go.bat",
-    "tokens": 592,
-    "lines": 86,
-    "mtime": 1781033665.5568519,
-    "hash": "0ca54c1a9c8450b05fc366ad223bb80b005f96ed"
+    "path": "go.bat"
   },
   {
-    "path": "README.md",
-    "tokens": 443,
-    "lines": 53,
-    "mtime": 1781032578.7243433,
-    "hash": "3dedc27c7721420bc3bbd8d080aaa5c5cb0c5dfa"
+    "path": "README.md"
   },
   {
-    "path": "llm.md",
-    "tokens": 254,
-    "lines": 15,
-    "mtime": 1781032578.7263699,
-    "hash": "b544ad6462322333114478c86b307f42a506cdf5"
+    "path": "llm.md"
   },
   {
-    "path": "concept.md",
-    "tokens": 4363,
-    "lines": 190,
-    "mtime": 1781032578.7302687,
-    "hash": "d47689476466e40db63ff41e1d550ff872b2aa91"
+    "path": "concept.md"
   },
   {
-    "path": "architecture.md",
-    "tokens": 5962,
-    "lines": 551,
-    "mtime": 1781032578.7326238,
-    "hash": "16257137ed8ff2104a8f04a4a4d21e782203504f"
+    "path": "architecture.md"
   },
   {
-    "path": "todo.md",
-    "tokens": 3002,
-    "lines": 168,
-    "mtime": 1781104343.7273161,
-    "hash": "2ececad9e44ba7af69b2c7ac000563a8e943fe83"
+    "path": "todo.md"
   },
   {
-    "path": "requirements.txt",
-    "tokens": 169,
-    "lines": 18,
-    "mtime": 1782397983.1967363,
-    "hash": "9aed8213ff8a95aa36a358818676b8c3fa51337e"
+    "path": "requirements.txt"
   },
   {
-    "path": "backend/config.json",
-    "tokens": 190,
-    "lines": 23,
-    "mtime": 1782312940.4149785,
-    "hash": "432e728b7674e95ba910827a864df6491da6f4d7"
+    "path": "backend/config.json"
   },
   {
-    "path": "backend/main.py",
-    "tokens": 1885,
-    "lines": 249,
-    "mtime": 1782314558.4157388,
-    "hash": "2cbe537e0340a922ae495424052c181b8ecd0225"
+    "path": "backend/main.py"
   },
   {
-    "path": "frontend/vite.config.mjs",
-    "tokens": 172,
-    "lines": 27,
-    "mtime": 1781033245.3892832,
-    "hash": "9c7b0892095553fd2484e4a2cffc614194657493"
+    "path": "frontend/vite.config.mjs"
   },
   {
-    "path": "frontend/jsconfig.json",
-    "tokens": 88,
-    "lines": 13,
-    "mtime": 1781033245.458656,
-    "hash": "0b91a462a9945c5efe84bc226649ab0501cf567f"
+    "path": "frontend/jsconfig.json"
   },
   {
-    "path": "frontend/index.html",
-    "tokens": 92,
-    "lines": 12,
-    "mtime": 1781033245.5230684,
-    "hash": "50fbad637cf09cc8be14f91e6a39be66d66be401"
+    "path": "frontend/index.html"
   },
   {
-    "path": "frontend/src/main.js",
-    "tokens": 45,
-    "lines": 7,
-    "mtime": 1781033245.5870197,
-    "hash": "51565fd50344f2d6fc37c656870fd5a4153fe045"
+    "path": "frontend/src/main.js"
   },
   {
-    "path": "frontend/src/App.vue",
-    "tokens": 2118,
-    "lines": 338,
-    "mtime": 1782400929.9811535,
-    "hash": "099d3eaddc916146b7e3c975cdf8eff3606980bd"
+    "path": "frontend/src/App.vue"
   },
   {
-    "path": "package.json",
-    "tokens": 293,
-    "ignoreTokens": false,
-    "lines": 28,
-    "mtime": 1781034489.8851547,
-    "hash": "fcbd95f6c4f58a94eedefea13f32baa9e6f6d5b8"
+    "path": "package.json"
   },
   {
-    "path": "backend/scripts/api/character.py",
-    "tokens": 3149,
-    "lines": 390,
-    "mtime": 1781104343.5187304,
-    "hash": "04f43ff3b1fbc0d190a8cd70561b9cf0b0a499bc"
+    "path": "backend/scripts/api/character.py"
   },
   {
-    "path": "backend/scripts/services/llm_service.py",
-    "tokens": 1613,
-    "lines": 170,
-    "mtime": 1782314558.8525038,
-    "hash": "162e68ee6e8c563a25b86cc91bd16d6bddf8a22c"
+    "path": "backend/scripts/services/llm_service.py"
   },
   {
-    "path": "backend/scripts/services/rag_service.py",
-    "tokens": 4071,
-    "lines": 395,
-    "mtime": 1782397983.2935555,
-    "hash": "6448c9f80d5b3cc0c611cb370afd1c1270a5c6ca"
+    "path": "backend/scripts/services/rag_service.py"
   },
   {
-    "path": "backend/scripts/core/chatsession.py",
-    "tokens": 1941,
-    "lines": 219,
-    "mtime": 1781169462.8695993,
-    "hash": "085d18885403a95a55235002a2de94af58992cb7"
+    "path": "backend/scripts/core/chatsession.py"
   },
   {
-    "path": "backend/scripts/core/orchestrator.py",
-    "tokens": 1370,
-    "lines": 156,
-    "mtime": 1782314558.5227797,
-    "hash": "c7d37729836e50796dff022677bbdd52fa13df66"
+    "path": "backend/scripts/core/orchestrator.py"
   },
   {
-    "path": "backend/scripts/test_orchestration.py",
-    "tokens": 894,
-    "lines": 118,
-    "mtime": 1781104343.4262495,
-    "hash": "de5572667c722a1c9a3525a9176631e456aad6ed"
+    "path": "backend/scripts/test_orchestration.py"
   },
   {
-    "path": "backend/scripts/core/context.py",
-    "tokens": 128,
-    "lines": 16,
-    "mtime": 1781104342.9560342,
-    "hash": "0ec3917cad0532ee2c171c562b96237dfa2f364d"
+    "path": "backend/scripts/core/context.py"
   },
   {
-    "path": "backend/scripts/services/transcription_service.py",
-    "tokens": 644,
-    "lines": 90,
-    "mtime": 1782314558.7331302,
-    "hash": "ae192f097c9aa4b703beee034103672e12e685f1"
+    "path": "backend/scripts/services/transcription_service.py"
   },
   {
-    "path": "backend/scripts/services/tts_service.py",
-    "tokens": 632,
-    "lines": 88,
-    "mtime": 1781104343.1248834,
-    "hash": "74e156933032b1123a4a8fa1daa7984c9f76a040"
+    "path": "backend/scripts/services/tts_service.py"
   },
   {
-    "path": "backend/scripts/test_draft_endpoint.py",
-    "tokens": 1094,
-    "lines": 140,
-    "mtime": 1781107073.3489819,
-    "hash": "1a4645b49c9ae1871b8f5f230d6e935356e58fa3"
+    "path": "backend/scripts/test_draft_endpoint.py"
   }
 ]

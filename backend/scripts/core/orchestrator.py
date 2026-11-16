@@ -98,7 +98,9 @@ def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Di
         search_query = rewrite_query(user_input, history)
         PipelineLogger.rag(f"Rewritten search query: '{search_query}'")
 
-        pov = rag_settings.get("pov", "all")
+        pov = rag_settings.get("pov")
+        if pov is None or str(pov).strip().lower() in ["none", "null", ""]:
+            pov = "None"
         chunksize = rag_settings.get("chunksize", 4)
         retrieved_chunks = retrieve_hybrid(search_query, rag_scheme, pov, chunksize)
 
@@ -106,11 +108,13 @@ def run_dialogue_pipeline(user_input: str, active_node_id: str, history: List[Di
             rag_context_text = "Retrieved Chunks:\n"
             for chunk in retrieved_chunks:
                 if isinstance(chunk, dict):
-                    text_val = chunk.get("text", "")
+                    text_val = chunk.get("text_content") or chunk.get("text", "")
+                    chunk_id = chunk.get("chunk_id") or chunk.get("id", "N/A")
                 else:
                     text_val = str(chunk)
+                    chunk_id = "N/A"
                 rag_context_text += f"- {text_val}\n"
-                PipelineLogger.rag(f"Retrieved chunk [{chunk.get('id', 'N/A')}]: {text_val[:60]}...")
+                PipelineLogger.rag(f"Retrieved chunk [{chunk_id}]: {text_val[:60]}...")
 
             metadata_categories = extract_metadata_categories(retrieved_chunks)
             PipelineLogger.rag(f"Metadata categories: {metadata_categories}")
