@@ -4,6 +4,8 @@ from typing import List, Dict, Any, Optional
 class SessionState(BaseModel):
     active_node_id: Optional[str] = None
     history: List[Dict[str, str]] = Field(default_factory=list)
+    active_flow_id: Optional[str] = "main"
+    open_topics: List[Dict[str, Any]] = Field(default_factory=list)
 
 class DraftConfig(BaseModel):
     info: Dict[str, Any] = Field(default_factory=dict)

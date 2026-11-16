@@ -39,3 +39,36 @@ In llm_service.py i log the streaming i do not want to anymore you send that ent
 
 ---
 
+## [2026-11-16 13:36:51] • Instruct Input
+
+I want to make an update to the application. I want to add more debugging when chatting. lets start with the test chat panel when editing a character. 
+at the point everything is send to a llm we should also send data to the frontend containing other data to display. like which step we are on. which character we talked to. on which pov. and what rag chunks are sended to with the chunk_id and full text.
+It should return a json like
+
+{
+"character": "henk",
+"step": "welcome",
+"pov": None,
+"chunks" : [{
+"id": "xxx", 
+"text" : }
+}
+
+then in the front-end when we click on the message itself. and extra comes from beneath and shows this data.
+
+---
+
+## [2026-11-16 15:02:59] • Instruct Input
+
+Default prompt: Comment Cleanup
+
+Default prompt: Work on todo.md
+
+---
+
+## [2026-11-16 15:09:00] • Instruct Input
+
+Default prompt: Work on todo.md
+
+---
+

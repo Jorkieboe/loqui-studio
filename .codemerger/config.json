@@ -2,7 +2,7 @@
   "project_name": "Loqui Studio",
   "project_color": "#E24C4C",
   "project_font_color": "light",
-  "active_profile": "no-todo",
+  "active_profile": "default",
   "known_files": [
     ".claude/CLAUDE.md",
     ".claude/settings.local.json",
@@ -50,6 +50,7 @@
     "backend/scripts/test_draft_endpoint.py",
     "backend/scripts/test_orchestration.py",
     "backend/scripts/test_rag.py",
+    "backend/scripts/tests/test_phase1_schemas.py",
     "backend/scripts/utils/logger.py",
     "concept.md",
     "frontend/index.html",
@@ -74,6 +75,7 @@
     "llm.md",
     "package.json",
     "requirements.txt",
-    "todo.md"
+    "todo.md",
+    "todo_old.md"
   ]
 }

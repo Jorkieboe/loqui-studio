@@ -1,16 +1,33 @@
 {
   "name": "Default",
   "expanded_dirs": [
+    ".claude",
     "backend",
     "backend/assets",
     "backend/assets/characters",
     "backend/assets/characters/example",
+    "backend/assets/characters/guillaume",
+    "backend/assets/characters/henk_de_bredanaar",
     "backend/assets/characters/mock_character",
+    "backend/assets/characters/werker",
     "backend/assets/rag_schemes",
+    "backend/assets/rag_schemes/breda",
+    "backend/assets/rag_schemes/example",
+    "backend/assets/rag_schemes/gennep",
     "backend/assets/rag_schemes/hussite_wars",
+    "backend/assets/rag_schemes/industrial",
     "backend/scripts",
     "backend/scripts/api",
     "backend/scripts/core",
-    "backend/scripts/services"
+    "backend/scripts/db",
+    "backend/scripts/services",
+    "backend/scripts/utils",
+    "frontend",
+    "frontend/src",
+    "frontend/src/components",
+    "frontend/src/router",
+    "frontend/src/stores",
+    "frontend/src/utils",
+    "frontend/src/views"
   ]
 }

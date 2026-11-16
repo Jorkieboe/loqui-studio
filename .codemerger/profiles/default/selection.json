@@ -15,9 +15,6 @@
     "path": "architecture.md"
   },
   {
-    "path": "todo.md"
-  },
-  {
     "path": "requirements.txt"
   },
   {
@@ -73,5 +70,74 @@
   },
   {
     "path": "backend/scripts/test_draft_endpoint.py"
+  },
+  {
+    "path": "backend/scripts/core/session_manager.py"
+  },
+  {
+    "path": "backend/scripts/db/__init__.py"
+  },
+  {
+    "path": "backend/scripts/db/conversation_repo.py"
+  },
+  {
+    "path": "backend/scripts/db/database.py"
+  },
+  {
+    "path": "backend/scripts/services/ollama_service.py"
+  },
+  {
+    "path": "backend/scripts/utils/logger.py"
+  },
+  {
+    "path": "backend/scripts/api/conversation.py"
+  },
+  {
+    "path": "todo.md"
+  },
+  {
+    "path": "frontend/src/views/CharacterEditorView.vue"
+  },
+  {
+    "path": "frontend/src/views/CharacterNewView.vue"
+  },
+  {
+    "path": "frontend/src/views/CharactersView.vue"
+  },
+  {
+    "path": "frontend/src/views/ChatView.vue"
+  },
+  {
+    "path": "frontend/src/views/HomeView.vue"
+  },
+  {
+    "path": "frontend/src/utils/chatHistory.js"
+  },
+  {
+    "path": "frontend/src/stores/navbar.js"
+  },
+  {
+    "path": "frontend/src/router/index.js"
+  },
+  {
+    "path": "frontend/src/components/ValidationBlock.vue"
+  },
+  {
+    "path": "frontend/src/components/TestChatPanel.vue"
+  },
+  {
+    "path": "frontend/src/components/GraphEditor.vue"
+  },
+  {
+    "path": "frontend/src/components/CharacterCard.vue"
+  },
+  {
+    "path": "frontend/src/components/AppNavbar.vue"
+  },
+  {
+    "path": "backend/scripts/test_rag.py"
+  },
+  {
+    "path": "backend/scripts/tests/test_phase1_schemas.py"
   }
 ]

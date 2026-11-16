@@ -1,0 +1,146 @@
+[
+  {
+    "path": "backend/config.json"
+  },
+  {
+    "path": "backend/main.py"
+  },
+  {
+    "path": "frontend/src/App.vue"
+  },
+  {
+    "path": "frontend/src/main.js"
+  },
+  {
+    "path": "frontend/index.html"
+  },
+  {
+    "path": "frontend/jsconfig.json"
+  },
+  {
+    "path": "frontend/vite.config.mjs"
+  },
+  {
+    "path": "2do.txt"
+  },
+  {
+    "path": "architecture.md"
+  },
+  {
+    "path": "concept.md"
+  },
+  {
+    "path": "go.bat"
+  },
+  {
+    "path": "llm.md"
+  },
+  {
+    "path": "package.json"
+  },
+  {
+    "path": "README.md"
+  },
+  {
+    "path": "requirements.txt"
+  },
+  {
+    "path": "backend/scripts/core/session_manager.py"
+  },
+  {
+    "path": "backend/scripts/core/orchestrator.py"
+  },
+  {
+    "path": "backend/scripts/core/chatsession.py"
+  },
+  {
+    "path": "backend/assets/characters/example/layout.json"
+  },
+  {
+    "path": "backend/assets/characters/example/info.json"
+  },
+  {
+    "path": "backend/assets/characters/example/prompts.yaml"
+  },
+  {
+    "path": "backend/scripts/api/character.py"
+  },
+  {
+    "path": "backend/scripts/core/context.py"
+  },
+  {
+    "path": "backend/scripts/test_orchestration.py"
+  },
+  {
+    "path": "backend/scripts/test_draft_endpoint.py"
+  },
+  {
+    "path": "backend/scripts/services/transcription_service.py"
+  },
+  {
+    "path": "backend/scripts/services/tts_service.py"
+  },
+  {
+    "path": "backend/scripts/services/rag_service.py"
+  },
+  {
+    "path": "backend/scripts/services/llm_service.py"
+  },
+  {
+    "path": "backend/scripts/services/ollama_service.py"
+  },
+  {
+    "path": "backend/scripts/utils/logger.py"
+  },
+  {
+    "path": "frontend/src/components/AppNavbar.vue"
+  },
+  {
+    "path": "frontend/src/components/CharacterCard.vue"
+  },
+  {
+    "path": "frontend/src/components/GraphEditor.vue"
+  },
+  {
+    "path": "frontend/src/components/TestChatPanel.vue"
+  },
+  {
+    "path": "frontend/src/router/index.js"
+  },
+  {
+    "path": "frontend/src/components/ValidationBlock.vue"
+  },
+  {
+    "path": "frontend/src/stores/navbar.js"
+  },
+  {
+    "path": "frontend/src/utils/chatHistory.js"
+  },
+  {
+    "path": "frontend/src/views/CharacterEditorView.vue"
+  },
+  {
+    "path": "frontend/src/views/CharacterNewView.vue"
+  },
+  {
+    "path": "frontend/src/views/CharactersView.vue"
+  },
+  {
+    "path": "frontend/src/views/ChatView.vue"
+  },
+  {
+    "path": "frontend/src/views/HomeView.vue"
+  },
+  {
+    "path": "backend/scripts/api/conversation.py"
+  },
+  {
+    "path": "backend/scripts/db/conversation_repo.py"
+  },
+  {
+    "path": "backend/scripts/db/database.py"
+  },
+  {
+    "path": "backend/scripts/db/__init__.py"
+  }
+]

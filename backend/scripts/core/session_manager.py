@@ -1,7 +1,16 @@
 import time
 
 class ChatSession:
-    def __init__(self, character_id=None, history=None, current_node_id=None, next_node_id=None, possible_next_nodes=None):
+    def __init__(
+        self,
+        character_id=None,
+        history=None,
+        current_node_id=None,
+        next_node_id=None,
+        possible_next_nodes=None,
+        active_flow_id="main",
+        open_topics=None
+    ):
         self.character_id = character_id
         self.history = history if history is not None else []
         self.current_node_id = current_node_id
@@ -9,6 +18,8 @@ class ChatSession:
         self.possible_next_nodes = possible_next_nodes if possible_next_nodes is not None else []
         self.loop_counters = {}
         self.active_loop_id = None
+        self.active_flow_id = active_flow_id if active_flow_id is not None else "main"
+        self.open_topics = open_topics if open_topics is not None else []
 
 class Session:
     def __init__(self, session_id):

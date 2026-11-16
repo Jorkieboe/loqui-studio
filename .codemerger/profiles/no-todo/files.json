@@ -6,6 +6,9 @@
     "backend/assets/rag_schemes/breda/db_metadata.json",
     "backend/assets/rag_schemes/breda/metadatascheme.json",
     "backend/assets/rag_schemes/example/db_metadata.json",
-    "backend/scripts/test_rag.py"
+    "backend/scripts/test_rag.py",
+    "backend/scripts/tests/test_phase1_schemas.py",
+    "todo.md",
+    "todo_old.md"
   ]
 }
