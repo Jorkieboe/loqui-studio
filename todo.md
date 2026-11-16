@@ -266,15 +266,15 @@ if __name__ == "__main__":
 ---
 
 ### Phase 3 & 4: Vue Flow Graph & Topology Validation
-- [ ] **3.1. Build `ReactiveNode` Component (`frontend/src/components/GraphEditor.vue`)**
+- [x] **3.1. Build `ReactiveNode` Component (`frontend/src/components/GraphEditor.vue`)**
   - Render node class with distinct UI badge (`Reactive Flow` / `Standalone Reactive`).
   - Inputs for `trigger_intent` (used for the tool description) and `flow_label`.
-- [ ] **3.2. Build `BridgeNode` Component (`frontend/src/components/GraphEditor.vue`)**
+- [x] **3.2. Build `BridgeNode` Component (`frontend/src/components/GraphEditor.vue`)**
   - Distinct badge indicating subflow exit point.
   - Optional custom prompt directive override.
-- [ ] **3.3. Auto-Spawn Bridge on new Reactive Flow creation (`frontend/src/views/CharacterEditorView.vue`)**
+- [x] **3.3. Auto-Spawn Bridge on new Reactive Flow creation (`frontend/src/views/CharacterEditorView.vue`)**
   - When dragging or adding a `reactive` node with `mode: "flow"`, auto-spawn an accompanying `bridge-node` connected downstream.
-- [ ] **4.1. Graph Topology Validation (`frontend/src/views/CharacterEditorView.vue` & Backend Validator `scripts/core/validation.py`)**
+- [x] **4.1. Graph Topology Validation (`frontend/src/views/CharacterEditorView.vue` & Backend Validator `scripts/core/validation.py`)**
   - Crawler rule: Any `reactive` node set to `mode: "flow"` must contain a reachable path to a `bridge-node`.
   - Block graph saving/deployment if a reactive sub-flow has an unbridged dead end.
 

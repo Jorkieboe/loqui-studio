@@ -13,7 +13,6 @@ const navbarStore = useNavbarStore()
 const charId = computed(() => route.params.id)
 const activeTab = ref('base')
 
-// Chat state lifted here so it survives tab switches (TestChatPanel unmounts on v-if)
 const chatMessages     = ref([])
 const chatSessionState = ref({ active_node_id: null, history: [] })
 
@@ -51,8 +50,10 @@ const selectedNode = computed(() => {
   return prompts.value.var_prompt?.find(n => n.id === selectedNodeId.value) || null
 })
 
-const isFlowNode   = computed(() => selectedNode.value?.node_class === 'flow')
-const isPromptNode = computed(() => selectedNode.value?.node_class === 'prompt')
+const isFlowNode     = computed(() => selectedNode.value?.node_class === 'flow')
+const isPromptNode   = computed(() => selectedNode.value?.node_class === 'prompt')
+const isReactiveNode = computed(() => selectedNode.value?.node_class === 'reactive')
+const isBridgeNode   = computed(() => selectedNode.value?.type === 'bridge-node')
 
 const editingNodeTitle = ref(false)
 const nodeTitleInput = ref(null)
@@ -136,20 +137,21 @@ function onNodeSelected(id) {
   selectedNodeId.value = id
 }
 
-const FLOW_TYPES = new Set(['start-node', 'end-node', 'loop-node', 'cycle-node'])
+const FLOW_TYPES = new Set(['start-node', 'end-node', 'loop-node', 'cycle-node', 'bridge-node'])
 
 const NODE_DEFAULTS = {
-  'basic':      { node_class: 'prompt', displayName: 'New node', goal: '', tone: '', next: [] },
-  'advanced':   { node_class: 'prompt', displayName: 'New node', goal: '', tone: '', example: '', follow_up: '', ext_info: 'disabled', next: [] },
-  'deflect':    { node_class: 'prompt', displayName: 'Deflect',  goal: '', tone: '', example: '', next: [] },
-  'silence':    { node_class: 'prompt', displayName: 'Silence',  goal: '', tone: '', example: '', next: [] },
-  'start-node': { node_class: 'flow',   displayName: 'Start',   next: [] },
-  'end-node':   { node_class: 'flow',   displayName: 'End',     next: [] },
-  'loop-node':  { node_class: 'flow',   displayName: 'Loop',    loop_count: 3, next: [] },
-  'cycle-node': { node_class: 'flow',   displayName: 'Cycle',   next: [] },
+  'basic':               { node_class: 'prompt', displayName: 'New node', goal: '', tone: '', next: [] },
+  'advanced':            { node_class: 'prompt', displayName: 'New node', goal: '', tone: '', example: '', follow_up: '', ext_info: 'disabled', next: [] },
+  'deflect':             { node_class: 'prompt', displayName: 'Deflect',  goal: '', tone: '', example: '', next: [] },
+  'silence':             { node_class: 'prompt', displayName: 'Silence',  goal: '', tone: '', example: '', next: [] },
+  'start-node':          { node_class: 'flow',   displayName: 'Start',   next: [] },
+  'end-node':            { node_class: 'flow',   displayName: 'End',     next: [] },
+  'bridge-node':         { node_class: 'flow',   type: 'bridge-node', displayName: 'Bridge', goal: '', next: [] },
+  'loop-node':           { node_class: 'flow',   displayName: 'Loop',    loop_count: 3, next: [] },
+  'cycle-node':          { node_class: 'flow',   displayName: 'Cycle',   next: [] },
+  'reactive-flow':       { node_class: 'reactive', mode: 'flow', displayName: 'Reactive Flow', trigger_intent: '', flow_label: '', next: [] },
+  'reactive-standalone': { node_class: 'reactive', mode: 'standalone', displayName: 'Reactive Standalone', trigger_intent: '', goal: '', tone: '', next: [] },
 }
-
-// ── Graph sync handlers ───────────────────────────────────────────────────────
 
 function resetChat() {
   chatMessages.value     = []
@@ -208,14 +210,75 @@ function onUpdatePositions(updates) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 function onAddNode(type) {
   const defaults = NODE_DEFAULTS[type]
   if (!defaults) return
-  const id = `${type}_${Date.now()}`
+
+  const timestamp = Date.now()
+  const count = prompts.value.var_prompt?.length || 0
+
+  if (type === 'reactive-flow') {
+    const reactiveId = `reactive_${timestamp}`
+    const bridgeId = `bridge_${timestamp}`
+
+    const reactiveNode = {
+      id: reactiveId,
+      type: 'reactive-node',
+      ...defaults,
+      next: [{ target: bridgeId }],
+    }
+
+    const bridgeDefaults = NODE_DEFAULTS['bridge-node']
+    const bridgeNode = {
+      id: bridgeId,
+      ...bridgeDefaults,
+      next: [],
+    }
+
+    prompts.value.var_prompt = [
+      ...(prompts.value.var_prompt || []),
+      reactiveNode,
+      bridgeNode,
+    ]
+
+    layout.value.nodes = [
+      ...(layout.value.nodes || []),
+      {
+        id: reactiveId,
+        label: reactiveId,
+        node_class: 'reactive',
+        type: 'reactive-node',
+        position: { x: 250, y: count * 160 },
+        data: {},
+      },
+      {
+        id: bridgeId,
+        label: bridgeId,
+        node_class: 'flow',
+        type: 'bridge-node',
+        position: { x: 250, y: (count + 1) * 160 },
+        data: {},
+      },
+    ]
+
+    layout.value.connections = [
+      ...(layout.value.connections || []),
+      {
+        id: `conn_${reactiveId}__${bridgeId}`,
+        source: reactiveId,
+        sourceOutput: 'out',
+        target: bridgeId,
+        targetInput: 'in',
+        data: { label: '' },
+      },
+    ]
+
+    selectedNodeId.value = reactiveId
+    return
+  }
+
+  const id = `${type}_${timestamp}`
   prompts.value.var_prompt = [...(prompts.value.var_prompt || []), { id, type, ...defaults }]
-  const count = prompts.value.var_prompt.length
   layout.value.nodes = [...(layout.value.nodes || []), {
     id, label: id,
     node_class: defaults.node_class,
@@ -251,8 +314,43 @@ const validationErrors = computed(() => {
     const connected = (startNode.next || []).some(conn =>
       varPrompt.find(n => n.id === conn.target)?.node_class === 'prompt'
     )
-    if (!connected)
+    if (!connected) {
       errors.push('Start node must connect to at least one prompt node')
+    }
+  }
+
+  const nodeMap = new Map((varPrompt || []).map(n => [n.id, n]))
+  const reactiveFlows = (varPrompt || []).filter(n => n.node_class === 'reactive' && n.mode === 'flow')
+
+  for (const rNode of reactiveFlows) {
+    const visited = new Set()
+    const queue = [rNode.id]
+    let reachedBridge = false
+
+    while (queue.length > 0) {
+      const currId = queue.shift()
+      if (visited.has(currId)) continue
+      visited.add(currId)
+
+      const currNode = nodeMap.get(currId)
+      if (!currNode) continue
+
+      if (currNode.type === 'bridge-node' || (currNode.node_class === 'flow' && currNode.type === 'bridge-node')) {
+        reachedBridge = true
+        break
+      }
+
+      for (const item of (currNode.next || [])) {
+        const target = item?.target || item
+        if (target && !visited.has(target)) {
+          queue.push(target)
+        }
+      }
+    }
+
+    if (!reachedBridge) {
+      errors.push(`Reactive flow '${rNode.displayName || rNode.id}' must end with a connected Bridge node.`)
+    }
   }
 
   return errors
@@ -365,7 +463,7 @@ onBeforeUnmount(() => {
               </datalist>
             </div>
           </section>
-          </div><!-- /form-inner -->
+          </div>
         </div>
 
         <div class="chat-col">
@@ -378,18 +476,45 @@ onBeforeUnmount(() => {
       <div v-if="activeTab === 'graph'" class="tab-content graph-tab">
         <div class="node-editor-col scrollable">
 
-          <!-- Nothing selected -->
           <div v-if="!selectedNode" class="node-hint">Click a node to edit its properties.</div>
 
-          <!-- Flow: start / end / cycle — no editable props -->
-          <template v-else-if="isFlowNode && selectedNode.type !== 'loop-node'">
-            <div class="node-type-badge" :class="selectedNode.type + '-badge'">{{ selectedNode.type }}</div>
+          <!-- Bridge node -->
+          <template v-else-if="isBridgeNode">
+            <div class="node-title-row">
+              <h3 v-if="!editingNodeTitle" class="node-title">{{ selectedNode.displayName }}</h3>
+              <input
+                v-else
+                ref="nodeTitleInput"
+                class="node-title-input"
+                v-model="selectedNode.displayName"
+                @blur="editingNodeTitle = false"
+                @keydown.enter="editingNodeTitle = false"
+                @keydown.escape="editingNodeTitle = false"
+              />
+              <button class="node-title-edit-btn" @click="startEditTitle" title="Rename node">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+            </div>
+            <div class="field">
+              <label>Custom wrap-up directive (optional)</label>
+              <textarea v-model="selectedNode.goal" rows="4" placeholder="Leave blank to use default bridge wrap-up instruction." />
+            </div>
+            <p class="field-hint">Wraps up the sub-flow and prompts the user to return to shelved open topics.</p>
+          </template>
+
+          <!-- Flow: start / end / cycle -->
+          <template v-else-if="isFlowNode && selectedNode.type !== 'loop-node' && !isBridgeNode">
+            <div class="node-title-row">
+              <h3 class="node-title">{{ selectedNode.displayName }}</h3>
+            </div>
             <div class="node-hint" style="margin-top:1rem">No editable properties for this node.</div>
           </template>
 
           <!-- Flow: loop -->
           <template v-else-if="selectedNode.type === 'loop-node'">
-            <div class="node-type-badge loop-node-badge">loop</div>
             <div class="node-title-row">
               <h3 class="node-title">{{ selectedNode.displayName }}</h3>
             </div>
@@ -400,9 +525,63 @@ onBeforeUnmount(() => {
             <p class="field-hint">Number of times the loop runs before exiting via the Exit handle.</p>
           </template>
 
+          <!-- Reactive nodes: flow / standalone -->
+          <template v-else-if="isReactiveNode">
+            <div class="node-title-row">
+              <h3 v-if="!editingNodeTitle" class="node-title">{{ selectedNode.displayName }}</h3>
+              <input
+                v-else
+                ref="nodeTitleInput"
+                class="node-title-input"
+                v-model="selectedNode.displayName"
+                @blur="editingNodeTitle = false"
+                @keydown.enter="editingNodeTitle = false"
+                @keydown.escape="editingNodeTitle = false"
+              />
+              <button class="node-title-edit-btn" @click="startEditTitle" title="Rename node">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="field">
+              <label>Mode</label>
+              <select v-model="selectedNode.mode">
+                <option value="flow">Flow</option>
+                <option value="standalone">Standalone</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Trigger intent</label>
+              <textarea v-model="selectedNode.trigger_intent" rows="3" placeholder="Condition or user intent triggering this node..." />
+            </div>
+            <p class="field-hint">Used by the model to route to this node when the user brings up this topic.</p>
+
+            <div class="field" v-if="selectedNode.mode === 'flow'">
+              <label>Flow label</label>
+              <input v-model="selectedNode.flow_label" type="text" placeholder="e.g. dinner & restaurants" />
+            </div>
+            <p class="field-hint" v-if="selectedNode.mode === 'flow'">Human-readable topic title used when offering to resume this shelved topic.</p>
+
+            <!-- Instructions only shown for standalone reactive nodes -->
+            <template v-if="selectedNode.mode === 'standalone'">
+              <div class="field">
+                <label>Instruction</label>
+                <textarea v-model="selectedNode.goal" rows="4" />
+              </div>
+
+              <div class="field">
+                <label>Tone</label>
+                <input v-model="selectedNode.tone" type="text" />
+              </div>
+            </template>
+          </template>
+
           <!-- Prompt nodes: basic / advanced / deflect / silence -->
           <template v-else-if="isPromptNode">
-            <div class="node-type-badge" :class="selectedNode.type + '-badge'">{{ selectedNode.type }}</div>
             <div class="node-title-row">
               <h3 v-if="!editingNodeTitle" class="node-title">{{ selectedNode.displayName }}</h3>
               <input
@@ -432,13 +611,11 @@ onBeforeUnmount(() => {
               <input v-model="selectedNode.tone" type="text" />
             </div>
 
-            <!-- example: advanced, deflect, silence -->
             <div v-if="selectedNode.type !== 'basic'" class="field">
               <label>Example</label>
               <textarea v-model="selectedNode.example" rows="2" />
             </div>
 
-            <!-- advanced-only fields -->
             <template v-if="selectedNode.type === 'advanced'">
               <div class="field">
                 <label>Follow up</label>
@@ -512,7 +689,6 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
-/* Teal pill container — fixed width, 50/50 split */
 .tabs-track {
   display: flex;
   width: 380px;
@@ -555,7 +731,6 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
-/* BASE PROMPT TAB */
 .base-tab .form-col {
   flex: 1;
   min-width: 0;
@@ -567,7 +742,6 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
-/* GRAPH TAB */
 .graph-tab .node-editor-col {
   width: 260px;
   border-right: 1px solid var(--border);
@@ -592,7 +766,6 @@ onBeforeUnmount(() => {
   padding: 1rem 1.25rem;
 }
 
-/* FORM STYLES */
 .form-section {
   margin-bottom: 0.5rem;
 }
@@ -614,7 +787,7 @@ onBeforeUnmount(() => {
 .avatar-row {
   display: flex;
   gap: 1.5rem;
-  align-items: center; /* center avatar between the two fields */
+  align-items: center;
   margin-top: 0.75rem;
 }
 
@@ -723,7 +896,6 @@ onBeforeUnmount(() => {
   background: var(--primary-hover);
 }
 
-/* NODE EDITOR */
 .node-hint {
   color: var(--text-muted);
   font-size: 0.85rem;
@@ -738,25 +910,6 @@ onBeforeUnmount(() => {
   margin: -0.25rem 0 0.75rem;
   line-height: 1.5;
 }
-
-.node-type-badge {
-  display: inline-block;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 0.15rem 0.5rem;
-  border-radius: 4px;
-  margin-bottom: 0.75rem;
-}
-.basic-badge      { background: #E6FAF5; color: #1a6b55; }
-.advanced-badge   { background: #E6FAF5; color: #1a6b55; }
-.deflect-badge    { background: #FEF3C7; color: #92400E; }
-.silence-badge    { background: #F1F5F9; color: #475569; }
-.loop-node-badge  { background: #EEF2FF; color: #4F46E5; }
-.start-node-badge { background: #D1FAE5; color: #065F46; }
-.end-node-badge   { background: #F3F4F6; color: #374151; }
-.cycle-node-badge { background: #FFF3E0; color: #C2410C; }
 
 .node-title-row {
   display: flex;

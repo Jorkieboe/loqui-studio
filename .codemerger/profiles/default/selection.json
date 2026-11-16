@@ -145,5 +145,11 @@
   },
   {
     "path": "backend/scripts/tests/test_phase2_dispatcher.py"
+  },
+  {
+    "path": "backend/scripts/core/validation.py"
+  },
+  {
+    "path": "backend/scripts/tests/test_phase4_validation.py"
   }
 ]

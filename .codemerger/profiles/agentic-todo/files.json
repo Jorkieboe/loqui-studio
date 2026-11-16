@@ -7,9 +7,11 @@
     "backend/assets/rag_schemes/breda/metadatascheme.json",
     "backend/assets/rag_schemes/example/db_metadata.json",
     "backend/scripts/core/intent_dispatcher.py",
+    "backend/scripts/core/validation.py",
     "backend/scripts/test_rag.py",
     "backend/scripts/tests/test_phase1_schemas.py",
     "backend/scripts/tests/test_phase2_dispatcher.py",
+    "backend/scripts/tests/test_phase4_validation.py",
     "todo.md",
     "todo_old.md"
   ]

@@ -84,3 +84,9 @@ Default prompt: Work on todo.md
 
 ---
 
+## [2026-11-16 16:30:54] • Instruct Input
+
+Default prompt: Work on todo.md
+
+---
+

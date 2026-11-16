@@ -19,11 +19,9 @@ def assemble_system_prompt(
     donts: list,
     context: dict,
     active_node_config: dict,
-    rag_context_text: str = ""
+    rag_context_text: str = "",
+    bridge_directive: str = ""
 ) -> str:
-    """
-    Assemble the system prompt by combining different properties in one string.
-    """
     system_prompt = f"{base_prompt}\n\n"
 
     if dos:
@@ -63,6 +61,9 @@ def assemble_system_prompt(
             system_prompt += f"- Next follow up point to check: {follow_up}\n"
         system_prompt += "\n"
 
+    if bridge_directive:
+        system_prompt += f"BRIDGE DIRECTIVE:\n{bridge_directive}\n\n"
+
     return system_prompt
 
 def run_dialogue_pipeline(
@@ -73,13 +74,11 @@ def run_dialogue_pipeline(
     loop_state: dict = None,
     session_instance: Any = None
 ) -> Dict[str, Any]:
-    """
-        get character data, find current node, retrieve relevant information, generate response
-    """
     from scripts.services.ollama_service import manage_models, is_ollama_available, load_ollama_config
     ollama_cfg = load_ollama_config()
     if ollama_cfg.get("enabled", True) and is_ollama_available():
         manage_models()
+
     info = character_config.get("info", {})
     prompts = character_config.get("prompts", {})
     layout = character_config.get("layout", {})
@@ -164,14 +163,29 @@ def run_dialogue_pipeline(
                         "paused_node_id": active_node_id
                     })
                 session_instance.active_flow_id = intent
-                active_node_config = matched_node
-                next_trans = active_node_config.get("next", [])
-                if isinstance(next_trans, list) and next_trans:
-                    first = next_trans[0]
-                    next_node_id = first.get("target") if isinstance(first, dict) else first
+
+                # If reactive flow node has no direct goal, advance into its first child prompt node
+                next_trans = matched_node.get("next", [])
+                first_target = next_trans[0].get("target") if (isinstance(next_trans, list) and next_trans and isinstance(next_trans[0], dict)) else (next_trans[0] if (isinstance(next_trans, list) and next_trans) else None)
+                first_child = next((n for n in var_prompt if n.get("id") == first_target), None) if first_target else None
+
+                if not matched_node.get("goal") and first_child and first_child.get("type") != "bridge-node":
+                    active_node_config = first_child
+                    child_trans = active_node_config.get("next", [])
+                    if isinstance(child_trans, list) and child_trans:
+                        first = child_trans[0]
+                        next_node_id = first.get("target") if isinstance(first, dict) else first
+                    else:
+                        next_node_id = active_node_config.get("id")
+                    possible_next_nodes = [t.get("target") for t in child_trans if isinstance(t, dict) and t.get("target")]
                 else:
-                    next_node_id = active_node_config.get("id")
-                possible_next_nodes = [t.get("target") for t in next_trans if isinstance(t, dict) and t.get("target")]
+                    active_node_config = matched_node
+                    if isinstance(next_trans, list) and next_trans:
+                        first = next_trans[0]
+                        next_node_id = first.get("target") if isinstance(first, dict) else first
+                    else:
+                        next_node_id = active_node_config.get("id")
+                    possible_next_nodes = [t.get("target") for t in next_trans if isinstance(t, dict) and t.get("target")]
         else:
             next_node_id, active_node_config, possible_next_nodes = traverse_fsm(
                 user_input=user_input,
@@ -189,7 +203,7 @@ def run_dialogue_pipeline(
 
     rag_settings = info.get("rag", {})
     rag_scheme = rag_settings.get("ragScheme")
-    ext_info = active_node_config.get("ext_info", "disabled")
+    ext_info = active_node_config.get("ext_info", "disabled") if active_node_config else "disabled"
     PipelineLogger.llm_status(f"Pipeline Active Node: {active_node_id}, ext_info: {ext_info}, rag_scheme: {rag_scheme}")
 
     if rag_scheme and ext_info == "fetch":
@@ -223,11 +237,9 @@ def run_dialogue_pipeline(
         dos=dos,
         donts=donts,
         context=context,
-        active_node_config=active_node_config
+        active_node_config=active_node_config,
+        bridge_directive=bridge_directive
     )
-
-    if bridge_directive:
-        system_prompt += f"BRIDGE DIRECTIVE:\n{bridge_directive}\n\n"
 
     api_messages = [{"role": "system", "content": system_prompt}]
     for turn in history:

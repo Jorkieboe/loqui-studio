@@ -26,17 +26,18 @@ const showAddMenu  = ref(false)
 const hasDeflect = computed(() => props.varPrompt.some(n => n.type === 'deflect'))
 const hasSilence = computed(() => props.varPrompt.some(n => n.type === 'silence'))
 
-const FLOW_TYPES = new Set(['start-node', 'end-node', 'loop-node', 'cycle-node'])
+const FLOW_TYPES = new Set(['start-node', 'end-node', 'loop-node', 'cycle-node', 'bridge-node'])
 
 function getVueFlowType(n) {
-  if (FLOW_TYPES.has(n.type)) return n.type          // 'start-node', 'end-node', etc.
-  if (n.type === 'deflect')   return 'deflect-node'
-  if (n.type === 'silence')   return 'silence-node'
-  return 'prompt-node'                                // basic / advanced
+  if (n.node_class === 'reactive') return 'reactive-node'
+  if (n.type === 'bridge-node')    return 'bridge-node'
+  if (FLOW_TYPES.has(n.type))      return n.type
+  if (n.type === 'deflect')        return 'deflect-node'
+  if (n.type === 'silence')        return 'silence-node'
+  return 'prompt-node'
 }
 
 function buildGraph() {
-  // Nodes come from varPrompt; positions from layoutData
   nodes.value = props.varPrompt.map(n => {
     const layoutNode = props.layoutData.nodes?.find(l => l.label === n.id || l.id === n.id)
     return {
@@ -44,14 +45,16 @@ function buildGraph() {
       position: layoutNode?.position || { x: 0, y: 0 },
       type:     getVueFlowType(n),
       data: {
-        label:     n.displayName || n.id,
-        goal:      n.goal      || '',
-        loopCount: n.loop_count ?? 3,
+        label:         n.displayName || n.id,
+        goal:          n.goal || '',
+        loopCount:     n.loop_count ?? 3,
+        mode:          n.mode || 'flow',
+        triggerIntent: n.trigger_intent || '',
+        flowLabel:     n.flow_label || '',
       },
     }
   })
 
-  // Edges come from varPrompt[].next
   const allEdges = []
   for (const n of props.varPrompt) {
     const isLoop = n.type === 'loop-node'
@@ -75,9 +78,6 @@ onNodeClick(({ node }) => {
   emit('nodeSelected', node.id)
 })
 
-// ── Sync VueFlow changes back to parent ──────────────────────────────────────
-
-// New edge drawn by user
 onConnect((connection) => {
   emit('connectEdge', {
     source:       connection.source,
@@ -86,11 +86,9 @@ onConnect((connection) => {
   })
 })
 
-// Edge deleted (select + Delete key)
 onEdgesChange((changes) => {
   const removals = changes.filter(c => c.type === 'remove')
   if (!removals.length) return
-  // Edges are still in edges.value at this point (change fires before model update)
   const removed = removals
     .map(c => edges.value.find(e => e.id === c.id))
     .filter(Boolean)
@@ -98,7 +96,6 @@ onEdgesChange((changes) => {
   if (removed.length) emit('disconnectEdges', removed)
 })
 
-// Node deleted
 onNodesChange((changes) => {
   const removals = changes.filter(c => c.type === 'remove')
   if (removals.length) {
@@ -107,7 +104,6 @@ onNodesChange((changes) => {
   }
 })
 
-// Node drag ended — node.position is the final resting place
 onNodeDragStop(({ node }) => {
   emit('updatePositions', [{ id: node.id, position: node.position }])
 })
@@ -117,8 +113,6 @@ function addNode(type) {
   showAddMenu.value = false
 }
 
-// Only rebuild when varPrompt changes — layoutData position updates must NOT
-// re-trigger buildGraph or VueFlow's internal positions get overwritten mid-drag.
 watch(() => props.varPrompt, buildGraph, { deep: true, immediate: true })
 onMounted(() => setTimeout(() => fitView(), 100))
 </script>
@@ -161,6 +155,29 @@ onMounted(() => setTimeout(() => fitView(), 100))
         </div>
       </template>
 
+      <!-- BRIDGE -->
+      <template #node-bridge-node="{ id, data }">
+        <div class="node node-bridge" :class="{ selected: selectedId === id, active: props.activeNodeId === id }">
+          <Handle type="target" position="top" class="handle" />
+          <div class="bridge-header">
+            <span class="bridge-name">{{ data.label }}</span>
+          </div>
+          <Handle type="source" position="bottom" class="handle" />
+        </div>
+      </template>
+
+      <!-- REACTIVE -->
+      <template #node-reactive-node="{ id, data }">
+        <div class="node node-content node-reactive" :class="{ selected: selectedId === id, active: props.activeNodeId === id }">
+          <Handle type="target" position="top" class="handle" />
+          <div class="content-header reactive-header">
+            <span class="reactive-title">{{ data.label }}</span>
+          </div>
+          <div v-if="data.mode === 'standalone' && data.goal" class="content-goal">{{ data.goal }}</div>
+          <Handle type="source" position="bottom" class="handle" />
+        </div>
+      </template>
+
       <!-- LOOP -->
       <template #node-loop-node="{ id, data }">
         <div class="node node-loop" :class="{ selected: selectedId === id, active: props.activeNodeId === id }">
@@ -169,12 +186,10 @@ onMounted(() => setTimeout(() => fitView(), 100))
             <span class="loop-name">{{ data.label }}</span>
             <span class="loop-count">×{{ data.loopCount }}</span>
           </div>
-          <!-- Label row — flex so any number of outputs fit -->
           <div class="loop-outputs">
             <span class="loop-output-label">Body</span>
             <span class="loop-output-label">Exit</span>
           </div>
-          <!-- Handles spread along the bottom edge using left % -->
           <Handle id="loop-body" type="source" position="bottom" :style="{ left: '25%' }" class="handle" />
           <Handle id="loop-exit" type="source" position="bottom" :style="{ left: '75%' }" class="handle" />
         </div>
@@ -223,8 +238,13 @@ onMounted(() => setTimeout(() => fitView(), 100))
         <hr class="menu-divider" />
         <p class="menu-label">Flow</p>
         <button @click="addNode('end-node')">End</button>
+        <button @click="addNode('bridge-node')">Bridge</button>
         <button @click="addNode('loop-node')">Loop</button>
         <button @click="addNode('cycle-node')">Cycle</button>
+        <hr class="menu-divider" />
+        <p class="menu-label">Reactive</p>
+        <button @click="addNode('reactive-flow')">Reactive (Flow)</button>
+        <button @click="addNode('reactive-standalone')">Reactive (Standalone)</button>
       </div>
     </div>
     <div v-if="showAddMenu" class="menu-backdrop" @click="showAddMenu = false" />
@@ -255,7 +275,7 @@ onMounted(() => setTimeout(() => fitView(), 100))
   border: 2px solid white;
 }
 
-/* ── Flow pills ── */
+/* Flow pills */
 .node.node-flow {
   min-width: 76px;
   padding: 0.35rem 1rem;
@@ -270,7 +290,40 @@ onMounted(() => setTimeout(() => fitView(), 100))
 .node.node-cycle  { background: #F97316; color: #fff; border: 2px solid #ea6c0a; }
 .flow-label { pointer-events: none; }
 
-/* ── Loop ── */
+/* Bridge node */
+.node.node-bridge {
+  min-width: 110px;
+  background: white;
+  border: 2px solid #818CF8;
+  border-radius: 8px;
+  text-align: center;
+}
+.bridge-header {
+  padding: 0.45rem 0.8rem;
+  background: #EEF2FF;
+  border-radius: 6px;
+}
+.bridge-name {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #3730A3;
+}
+
+/* Reactive node */
+.node.node-reactive {
+  border-bottom: 3px solid #9333EA;
+}
+.reactive-header {
+  background: #FAF5FF;
+  color: #6B21A8;
+  border-bottom: 1px solid #E9D5FF;
+}
+.reactive-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+/* Loop */
 .node.node-loop {
   min-width: 120px;
   background: white;
@@ -294,7 +347,6 @@ onMounted(() => setTimeout(() => fitView(), 100))
   background: white; border: 1px solid #C7D2FE;
   border-radius: 4px; padding: 0.05rem 0.3rem;
 }
-/* Flex row of output labels — one per handle, scales to any count */
 .loop-outputs {
   display: flex;
   justify-content: space-around;
@@ -309,7 +361,7 @@ onMounted(() => setTimeout(() => fitView(), 100))
   pointer-events: none;
 }
 
-/* ── Content nodes ── */
+/* Content nodes */
 .node.node-content {
   min-width: 140px;
   max-width: 210px;
@@ -341,7 +393,7 @@ onMounted(() => setTimeout(() => fitView(), 100))
   max-width: 206px;
 }
 
-/* ── Add area ── */
+/* Add area */
 .add-area {
   position: absolute;
   bottom: 1rem; left: 1rem;
@@ -395,7 +447,6 @@ onMounted(() => setTimeout(() => fitView(), 100))
   z-index: 9;
 }
 
-/* ── Active (current chat node) ── */
 @keyframes node-pulse {
   0%, 100% { box-shadow: 0 2px 8px rgba(0,0,0,.10), 0 0 0 2px #F59E0B, 0 0 10px 2px rgba(245,158,11,.35); }
   50%       { box-shadow: 0 2px 8px rgba(0,0,0,.10), 0 0 0 2px #F59E0B, 0 0 18px 4px rgba(245,158,11,.10); }
