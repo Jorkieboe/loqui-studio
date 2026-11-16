@@ -119,10 +119,18 @@ def api_request(
     if not api_key:
         PipelineLogger.llm_status("OPENAI_API_KEY not found in environment and Ollama is not available. Using fallback simulator.")
         def mock_generator():
-            fallback_response = (
-                "[SIMULATION MODE] This is a simulated character response because no OPENAI_API_KEY was found in the environment and Ollama is not active. "
-                "Ensure your API keys or local Ollama instances are configured."
-            )
+            sys_msg = next((m.get("content", "") for m in messages if m.get("role") == "system"), "")
+            if "BRIDGE DIRECTIVE:" in sys_msg:
+                directive_part = sys_msg.split("BRIDGE DIRECTIVE:")[1].split("\n\n")[0].strip()
+                fallback_response = f"[SIMULATION MODE] Bram here! That sounds great. {directive_part}"
+            elif "- Goal:" in sys_msg:
+                goal_part = sys_msg.split("- Goal:")[1].split("\n")[0].strip()
+                fallback_response = f"[SIMULATION MODE] Bram here! {goal_part}"
+            else:
+                fallback_response = (
+                    "[SIMULATION MODE] This is a simulated character response because no OPENAI_API_KEY was found in the environment and Ollama is not active. "
+                    "Ensure your API keys or local Ollama instances are configured."
+                )
             for word in fallback_response.split(" "):
                 yield word + " "
             PipelineLogger.llm_output(fallback_response)

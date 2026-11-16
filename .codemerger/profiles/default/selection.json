@@ -151,5 +151,8 @@
   },
   {
     "path": "backend/scripts/tests/test_phase4_validation.py"
+  },
+  {
+    "path": "backend/scripts/tests/test_phase5_e2e_bnb.py"
   }
 ]

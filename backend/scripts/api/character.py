@@ -379,7 +379,8 @@ async def test_draft(payload: dict):
             "chunks": chunks_formatted,
             "active_flow_id": pipeline_result.get("active_flow_id", "main"),
             "open_topics": pipeline_result.get("open_topics", []),
-            "intent": pipeline_result.get("intent", "resume_current_flow")
+            "intent": pipeline_result.get("intent", "resume_current_flow"),
+            "dynamic_tools": pipeline_result.get("dynamic_tools", [])
         }
 
         return {

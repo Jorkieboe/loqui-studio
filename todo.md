@@ -358,13 +358,13 @@ if __name__ == "__main__":
 ---
 
 ### Phase 5: Debug Telemetry & Multi-Turn Scenario Test
-- [ ] **5.1. Update Debug Drawer (`frontend/src/components/TestChatPanel.vue`)**
+- [x] **5.1. Update Debug Drawer (`frontend/src/components/TestChatPanel.vue`)**
   - Add drawer section displaying:
     - Current `active_flow_id`
     - Evaluated tool call intent (`reactive_<id>` or `resume_current_flow`)
     - Dynamic tools passed to the model during the turn
     - Current `open_topics` stack items
-- [ ] **5.2. Multi-Turn BnB Host Verification Script**
+- [x] **5.2. Multi-Turn BnB Host Verification Script**
   - Run the full interactive simulation script covering: initial flow -> sub-flow interruption -> topic stacking -> bridge trigger -> flow resumption via original reactive node tool call.
 
 ---
@@ -467,27 +467,35 @@ def run_e2e_bnb_test():
 
     # Turn 1: Ask for dinner (Triggers dining flow tool: 'reactive_dining')
     print("\n[Turn 1] Guest: 'Where should we eat tonight?'")
+    user_msg_1 = "Where should we eat tonight?"
     res1 = run_dialogue_pipeline(
-        user_input="Where should we eat tonight?",
+        user_input=user_msg_1,
         active_node_id=session.current_node_id,
         history=session.history,
         character_config=bnb_config,
         session_instance=session
     )
-    print(f"  Host Bram: {''.join(res1['response_stream'])}")
+    reply1 = ''.join(res1['response_stream'])
+    print(f"  Host Bram: {reply1}")
+    session.history.append({"role": "user", "content": user_msg_1})
+    session.history.append({"role": "assistant", "content": reply1})
     assert session.active_flow_id == "reactive_dining", f"Expected active_flow 'reactive_dining', got {session.active_flow_id}"
     print("  ✓ Successfully pivoted to Dining flow.")
 
     # Turn 2: Interruption with canal tours (Shelves dining into open_topics, triggers 'reactive_activities')
     print("\n[Turn 2] Guest: 'Wait, can we rent bikes or take a canal boat tomorrow?'")
+    user_msg_2 = "Wait, can we rent bikes or take a canal boat tomorrow?"
     res2 = run_dialogue_pipeline(
-        user_input="Wait, can we rent bikes or take a canal boat tomorrow?",
+        user_input=user_msg_2,
         active_node_id=session.current_node_id,
         history=session.history,
         character_config=bnb_config,
         session_instance=session
     )
-    print(f"  Host Bram: {''.join(res2['response_stream'])}")
+    reply2 = ''.join(res2['response_stream'])
+    print(f"  Host Bram: {reply2}")
+    session.history.append({"role": "user", "content": user_msg_2})
+    session.history.append({"role": "assistant", "content": reply2})
     assert session.active_flow_id == "reactive_activities"
     assert len(session.open_topics) == 1
     assert session.open_topics[0]["flow_id"] == "reactive_dining"
@@ -495,8 +503,9 @@ def run_e2e_bnb_test():
 
     # Turn 3: Bridge node triggers (Host wraps up activities & asks about dining)
     print("\n[Turn 3] Guest: 'Okay, boat tours sound fun.'")
+    user_msg_3 = "Okay, boat tours sound fun."
     res3 = run_dialogue_pipeline(
-        user_input="Okay, boat tours sound fun.",
+        user_input=user_msg_3,
         active_node_id=session.current_node_id,
         history=session.history,
         character_config=bnb_config,
@@ -504,20 +513,26 @@ def run_e2e_bnb_test():
     )
     reply3 = ''.join(res3['response_stream'])
     print(f"  Host Bram: {reply3}")
+    session.history.append({"role": "user", "content": user_msg_3})
+    session.history.append({"role": "assistant", "content": reply3})
     assert any(w in reply3.lower() for w in ["dinner", "restaurant", "eat", "food", "bistro"]), \
         "Host failed to bridge back to the open dining topic!"
     print("  ✓ Host successfully asked about previous open dining topic!")
 
     # Turn 4: Guest says yes to bridge (Evaluates to 'reactive_dining' tool call, restoring paused dining flow)
     print("\n[Turn 4] Guest: 'Yes please, tell me about that restaurant!'")
+    user_msg_4 = "Yes please, tell me about that restaurant!"
     res4 = run_dialogue_pipeline(
-        user_input="Yes please, tell me about that restaurant!",
+        user_input=user_msg_4,
         active_node_id=session.current_node_id,
         history=session.history,
         character_config=bnb_config,
         session_instance=session
     )
-    print(f"  Host Bram: {''.join(res4['response_stream'])}")
+    reply4 = ''.join(res4['response_stream'])
+    print(f"  Host Bram: {reply4}")
+    session.history.append({"role": "user", "content": user_msg_4})
+    session.history.append({"role": "assistant", "content": reply4})
     assert len(session.open_topics) == 0, "Open topic was not popped after resuming!"
     assert session.active_flow_id == "reactive_dining"
     print("  ✓ Open topic popped and resumed successfully.")

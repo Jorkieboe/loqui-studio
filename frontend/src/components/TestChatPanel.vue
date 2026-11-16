@@ -6,7 +6,7 @@ const props = defineProps({
 })
 
 const messages     = defineModel('messages',     { default: () => [] })
-const sessionState = defineModel('sessionState', { default: () => ({ active_node_id: null, history: [] }) })
+const sessionState = defineModel('sessionState', { default: () => ({ active_node_id: null, active_flow_id: 'main', open_topics: [], history: [] }) })
 
 const input   = ref('')
 const loading = ref(false)
@@ -34,6 +34,8 @@ async function send() {
         draft_config: props.draftConfig,
         session_state: {
           active_node_id: sessionState.value.active_node_id,
+          active_flow_id: sessionState.value.active_flow_id || 'main',
+          open_topics: sessionState.value.open_topics || [],
           history: sessionState.value.history,
         },
         user_input: text,
@@ -50,6 +52,10 @@ async function send() {
         step: data.step,
         pov: data.pov,
         chunks: data.chunks || [],
+        active_flow_id: data.active_flow_id || 'main',
+        open_topics: data.open_topics || [],
+        intent: data.intent || 'resume_current_flow',
+        dynamic_tools: data.dynamic_tools || [],
       }
 
       messages.value = [
@@ -63,6 +69,8 @@ async function send() {
 
       sessionState.value = {
         active_node_id: data.next_node_id,
+        active_flow_id: data.debug?.active_flow_id || 'main',
+        open_topics: data.debug?.open_topics || [],
         history: [...sessionState.value.history, { role: 'user', text }, { role: 'assistant', text: data.text }],
       }
     }
@@ -76,7 +84,7 @@ async function send() {
 
 function resetChat() {
   messages.value = []
-  sessionState.value = { active_node_id: null, history: [] }
+  sessionState.value = { active_node_id: null, active_flow_id: 'main', open_topics: [], history: [] }
   expandedIndex.value = null
 }
 
@@ -132,8 +140,42 @@ function onKeydown(e) {
             <span class="debug-val step-tag">{{ msg.debug.step || 'N/A' }}</span>
           </div>
           <div class="debug-row">
+            <span class="debug-key">Flow ID:</span>
+            <span class="debug-val flow-tag">{{ msg.debug.active_flow_id || 'main' }}</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-key">Intent:</span>
+            <span class="debug-val intent-tag">{{ msg.debug.intent || 'resume_current_flow' }}</span>
+          </div>
+          <div class="debug-row">
             <span class="debug-key">POV:</span>
             <span class="debug-val">{{ msg.debug.pov === null ? 'None' : msg.debug.pov }}</span>
+          </div>
+
+          <div class="debug-sub-header">
+            <span>Open Topics ({{ msg.debug.open_topics ? msg.debug.open_topics.length : 0 }}):</span>
+          </div>
+          <div v-if="!msg.debug.open_topics || !msg.debug.open_topics.length" class="debug-empty">
+            None (no shelved topics)
+          </div>
+          <div v-else class="debug-topics-list">
+            <div v-for="(topic, tIdx) in msg.debug.open_topics" :key="tIdx" class="debug-topic-item">
+              <span class="topic-label">{{ topic.flow_label || topic.flow_id }}</span>
+              <span class="topic-node">paused: {{ topic.paused_node_id || 'N/A' }}</span>
+            </div>
+          </div>
+
+          <div class="debug-sub-header">
+            <span>Dynamic Tools ({{ msg.debug.dynamic_tools ? msg.debug.dynamic_tools.length : 0 }}):</span>
+          </div>
+          <div v-if="!msg.debug.dynamic_tools || !msg.debug.dynamic_tools.length" class="debug-empty">
+            No dynamic tools
+          </div>
+          <div v-else class="debug-tools-list">
+            <div v-for="(tool, toIdx) in msg.debug.dynamic_tools" :key="toIdx" class="debug-tool-item">
+              <span class="tool-name">{{ tool.function?.name || tool.name }}</span>
+              <span class="tool-desc">{{ tool.function?.description || tool.description }}</span>
+            </div>
           </div>
 
           <div class="debug-chunks-header">
@@ -323,6 +365,86 @@ function onKeydown(e) {
   padding: 0.05rem 0.35rem;
   border-radius: 4px;
   font-family: monospace;
+}
+
+.flow-tag {
+  background: #f3e8ff;
+  color: #7e22ce;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.intent-tag {
+  background: #ecfdf5;
+  color: #047857;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.debug-sub-header {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+  border-top: 1px dashed var(--border);
+  padding-top: 0.4rem;
+}
+
+.debug-topics-list,
+.debug-tools-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.debug-topic-item {
+  background: #faf5ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.73rem;
+}
+
+.topic-label {
+  font-weight: 600;
+  color: #6b21a8;
+}
+
+.topic-node {
+  font-family: monospace;
+  font-size: 0.68rem;
+  color: #9333ea;
+}
+
+.debug-tool-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.tool-name {
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: #0f172a;
+}
+
+.tool-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  line-height: 1.35;
 }
 
 .debug-chunks-header {

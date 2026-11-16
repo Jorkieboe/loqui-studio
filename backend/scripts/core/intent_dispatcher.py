@@ -8,7 +8,11 @@ from scripts.services.llm_service import load_preset_config
 
 logger = logging.getLogger(__name__)
 
-def build_intent_tools(reactive_nodes: List[Dict[str, Any]], open_topics: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+def build_intent_tools(
+    reactive_nodes: List[Dict[str, Any]],
+    active_flow: str = "main",
+    open_topics: Optional[List[Dict[str, Any]]] = None
+) -> List[Dict[str, Any]]:
     tools = []
     shelved_flow_ids = {}
     if open_topics:
@@ -21,6 +25,9 @@ def build_intent_tools(reactive_nodes: List[Dict[str, Any]], open_topics: Option
     for node in reactive_nodes:
         node_id = node.get("id")
         if not node_id:
+            continue
+
+        if active_flow and active_flow != "main" and node_id == active_flow:
             continue
 
         trigger_intent = node.get("trigger_intent", f"User intent for {node_id}")
@@ -47,11 +54,18 @@ def build_intent_tools(reactive_nodes: List[Dict[str, Any]], open_topics: Option
             }
         })
 
+    resume_desc = (
+        f"Select this to continue the current conversation (currently in flow '{active_flow}'). "
+        "Do NOT select this if the user is agreeing to return to or asking about a previously shelved open topic."
+        if active_flow and active_flow != "main"
+        else "Select this if the user is continuing the current conversation or answering the assistant's previous question."
+    )
+
     tools.append({
         "type": "function",
         "function": {
             "name": "resume_current_flow",
-            "description": "Select this if the user does not want to switch flow and is continuing the current conversation or answering the assistant's previous question.",
+            "description": resume_desc,
             "parameters": {
                 "type": "object",
                 "properties": {}
@@ -61,7 +75,7 @@ def build_intent_tools(reactive_nodes: List[Dict[str, Any]], open_topics: Option
 
     return tools
 
-def _fallback_intent_match(user_input: str, reactive_nodes: List[Dict[str, Any]], open_topics: Optional[List[Dict[str, Any]]] = None) -> str:
+def _fallback_intent_match(user_input: str, reactive_nodes: List[Dict[str, Any]], active_flow: str = "main", open_topics: Optional[List[Dict[str, Any]]] = None) -> str:
     input_lower = user_input.lower()
 
     if open_topics:
@@ -69,9 +83,9 @@ def _fallback_intent_match(user_input: str, reactive_nodes: List[Dict[str, Any]]
             flow_id = topic.get("flow_id")
             flow_label = (topic.get("flow_label") or "").lower()
             label_words = [w for w in flow_label.replace("&", " ").replace(",", " ").split() if len(w) > 3]
-            resumption_terms = ["yes", "sure", "return", "back", "previous", "that", "tell me about"]
+            resumption_terms = ["yes", "sure", "return", "back", "previous", "that", "tell me about", "restaurant", "food", "dinner"]
             wants_resume = any(t in input_lower for t in resumption_terms)
-            matches_label = any(w in input_lower for w in label_words) if label_words else False
+            matches_label = any(w in input_lower or w.rstrip("s") in input_lower for w in label_words) if label_words else False
 
             if wants_resume and (matches_label or len(open_topics) == 1):
                 matched = next((n for n in reactive_nodes if n.get("id") == flow_id), None)
@@ -83,6 +97,9 @@ def _fallback_intent_match(user_input: str, reactive_nodes: List[Dict[str, Any]]
 
     for node in reactive_nodes:
         node_id = node.get("id")
+        if node_id == active_flow:
+            continue
+
         trigger = (node.get("trigger_intent") or "").lower()
         label = (node.get("flow_label") or "").lower()
 
@@ -108,16 +125,26 @@ def evaluate_intent(
     if not reactive_nodes:
         return "resume_current_flow"
 
-    tools = build_intent_tools(reactive_nodes, open_topics=open_topics)
+    tools = build_intent_tools(reactive_nodes, active_flow=active_flow, open_topics=open_topics)
 
     context_turns = history[-6:] if history else []
+    shelved_info = ""
+    if open_topics:
+        topic_summaries = [f"'{t.get('flow_id')}' (topic: {t.get('flow_label')})" for t in open_topics]
+        shelved_info = (
+            f"\nShelved open topics awaiting return: {', '.join(topic_summaries)}.\n"
+            "IMPORTANT: If the user accepts, agrees, or refers to returning to a shelved topic "
+            "(e.g., saying 'yes', 'sure', or mentioning the topic name), you MUST call that topic's tool to resume it."
+        )
+
     messages = [
         {
             "role": "system",
             "content": (
-                "You are an intent classification routing coordinator. "
-                "Analyze the conversation history and the latest user message. "
-                "Determine if the user is triggering a reactive topic, resuming an open topic, "
+                "You are an intent classification routing coordinator.\n"
+                "Analyze the conversation history and the latest user message.\n"
+                f"Current active flow: '{active_flow}'.{shelved_info}\n"
+                "Determine if the user is triggering a reactive topic, resuming a shelved open topic, "
                 "or continuing the current flow. Call the appropriate tool function."
             )
         }
@@ -161,6 +188,6 @@ def evaluate_intent(
         except Exception as e:
             logger.warning(f"Intent classification API call failed: {e}. Using fallback classifier.")
 
-    fallback_intent = _fallback_intent_match(user_input, reactive_nodes, open_topics)
+    fallback_intent = _fallback_intent_match(user_input, reactive_nodes, active_flow=active_flow, open_topics=open_topics)
     PipelineLogger.llm_status(f"Intent Dispatcher fallback evaluated: {fallback_intent}")
     return fallback_intent

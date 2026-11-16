@@ -1,7 +1,7 @@
 from typing import Dict, Any, List, Optional
 from scripts.core.chatsession import traverse_fsm
 from scripts.core.session_manager import ChatSession
-from scripts.core.intent_dispatcher import evaluate_intent
+from scripts.core.intent_dispatcher import evaluate_intent, build_intent_tools
 from scripts.services.rag_service import retrieve_hybrid, extract_metadata_categories, rewrite_query
 from scripts.services.llm_service import api_request
 from scripts.utils.logger import PipelineLogger
@@ -95,6 +95,8 @@ def run_dialogue_pipeline(
     reactive_nodes = [n for n in var_prompt if n.get("node_class") == "reactive"]
 
     intent = "resume_current_flow"
+    dynamic_tools = build_intent_tools(reactive_nodes, active_flow=session_instance.active_flow_id, open_topics=session_instance.open_topics) if reactive_nodes else []
+
     if reactive_nodes:
         intent = evaluate_intent(
             user_input=user_input,
@@ -145,6 +147,8 @@ def run_dialogue_pipeline(
                 session_instance.active_flow_id = intent
                 resume_target = shelved.get("paused_node_id") or intent
                 target_config = next((n for n in var_prompt if n.get("id") == resume_target), matched_node)
+                if target_config and (target_config.get("type") == "bridge-node" or not target_config.get("goal")):
+                    target_config = matched_node
                 active_node_config = target_config
                 next_trans = active_node_config.get("next", [])
                 if isinstance(next_trans, list) and next_trans:
@@ -267,6 +271,9 @@ def run_dialogue_pipeline(
 
     active_step_id = active_node_config.get("id") if active_node_config else active_node_id
 
+    if next_node_id:
+        session_instance.current_node_id = next_node_id
+
     return {
         "next_node_id": next_node_id,
         "active_step": active_step_id,
@@ -276,5 +283,6 @@ def run_dialogue_pipeline(
         "metadata_categories": metadata_categories,
         "active_flow_id": session_instance.active_flow_id,
         "open_topics": session_instance.open_topics,
-        "intent": intent
+        "intent": intent,
+        "dynamic_tools": dynamic_tools
     }

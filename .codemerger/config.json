@@ -55,6 +55,7 @@
     "backend/scripts/tests/test_phase1_schemas.py",
     "backend/scripts/tests/test_phase2_dispatcher.py",
     "backend/scripts/tests/test_phase4_validation.py",
+    "backend/scripts/tests/test_phase5_e2e_bnb.py",
     "backend/scripts/utils/logger.py",
     "concept.md",
     "frontend/index.html",
