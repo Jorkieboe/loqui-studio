@@ -33,3 +33,9 @@ Can you please create some logging that check al available rag schemes. all the 
 
 ---
 
+## [2026-11-16 13:29:36] • Instruct Input
+
+In llm_service.py i log the streaming i do not want to anymore you send that entire output at the end once
+
+---
+

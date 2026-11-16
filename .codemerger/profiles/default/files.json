@@ -40,7 +40,6 @@
     "frontend/src/views/CharacterNewView.vue",
     "frontend/src/views/CharactersView.vue",
     "frontend/src/views/ChatView.vue",
-    "frontend/src/views/HomeView.vue",
-    "newideas.md"
+    "frontend/src/views/HomeView.vue"
   ]
 }

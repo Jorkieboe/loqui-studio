@@ -85,6 +85,7 @@ def api_request(
                 def response_generator():
                     try:
                         chunk_count = 0
+                        full_content = ""
                         for line in response:
                             if line:
                                 decoded_line = line.decode("utf-8").strip()
@@ -94,15 +95,16 @@ def api_request(
                                         delta = chunk_data.get("message", {}).get("content", "")
                                         chunk_count += 1
                                         if delta:
-                                            PipelineLogger.llm_output(delta)
+                                            full_content += delta
                                             yield delta
                                     except Exception as parse_err:
                                         PipelineLogger.error("Ollama Parse Error", parse_err)
+                        PipelineLogger.llm_output(full_content)
                         PipelineLogger.llm_output("", is_end=True)
                         PipelineLogger.llm_status(f"Ollama Stream completed. Total chunks: {chunk_count}")
                     finally:
-                            response.close()
-                    return response_generator()
+                        response.close()
+                return response_generator()
             else:
                 with urllib.request.urlopen(req, timeout=60) as response:
                     res_data = json.loads(response.read().decode("utf-8"))
@@ -122,8 +124,8 @@ def api_request(
                 "Ensure your API keys or local Ollama instances are configured."
             )
             for word in fallback_response.split(" "):
-                PipelineLogger.llm_output(word + " ")
                 yield word + " "
+            PipelineLogger.llm_output(fallback_response)
             PipelineLogger.llm_output("", is_end=True)
         return mock_generator() if stream else "Simulated response: OpenAI API Key not configured."
     PipelineLogger.llm_status(f"Routing request to OpenAI/Cloud model: {model_name}")
@@ -147,14 +149,16 @@ def api_request(
             PipelineLogger.llm_status("Stream connection established. Streaming response:")
             def response_generator():
                 chunk_count = 0
+                full_content = ""
                 for chunk in response:
                     chunk_count += 1
                     if chunk.choices and len(chunk.choices) > 0:
                         delta = chunk.choices[0].delta.content
                         if delta is not None:
                             if delta:
-                                PipelineLogger.llm_output(delta)
+                                full_content += delta
                                 yield delta
+                PipelineLogger.llm_output(full_content)
                 PipelineLogger.llm_output("", is_end=True)
                 PipelineLogger.llm_status(f"Stream completed. Total chunks received: {chunk_count}")
             return response_generator()
