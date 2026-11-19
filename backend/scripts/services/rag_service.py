@@ -165,7 +165,10 @@ def normalize_chunk(raw_chunk: Any, fallback_idx: int = 0) -> Dict[str, Any]:
     chunk["pov"] = pov_list if pov_list else ["all"]
     return chunk
 
-def get_embedding(text: str) -> List[float]:
+def is_e5_model(model_name: str) -> bool:
+    return "e5" in (model_name or "").lower()
+
+def get_embedding(text: str, is_query: bool = True) -> List[float]:
     ollama_cfg = load_ollama_config()
     ollama_active = ollama_cfg.get("embedding_enabled", True) and is_ollama_available()
 
@@ -179,18 +182,27 @@ def get_embedding(text: str) -> List[float]:
         model_name = ollama_cfg.get("embedding_model", "nomic-embed-text")
         api_key = "ollama"
 
+    is_e5 = is_e5_model(model_name)
+    if is_e5:
+        if is_query:
+            formatted_text = text if text.startswith("query:") else f"query: {text}"
+        else:
+            formatted_text = text if text.startswith("passage:") else f"passage: {text}"
+    else:
+        formatted_text = text
+
     if api_key:
         try:
             from openai import OpenAI
             client = OpenAI(api_key=api_key, base_url=base_url)
-            logger.info(f"[RAG] Using embedding model: {model_name}")
-            res = client.embeddings.create(input=[f"query: {text}"], model=model_name)
+            logger.info(f"[RAG] Using embedding model: {model_name} (is_e5={is_e5}, is_query={is_query})")
+            res = client.embeddings.create(input=[formatted_text], model=model_name)
             return res.data[0].embedding
         except Exception as e:
             logger.error(f"Failed to generate embedding: {e}")
 
     # Fallback simulation
-    words = text.lower().split()
+    words = formatted_text.lower().split()
     vec = np.zeros(1536, dtype=np.float32)
     for i, w in enumerate(words):
         h = hash(w) % 1536
@@ -272,7 +284,7 @@ class RAGIndex:
                 embeddings = []
                 for chunk in self.chunks:
                     embed_text = chunk.get("breadcrumb") or chunk.get("text_content") or chunk.get("text", "")
-                    emb = get_embedding(embed_text)
+                    emb = get_embedding(embed_text, is_query=False)
                     embeddings.append(emb)
                 if embeddings:
                     emb_matrix = np.array(embeddings, dtype=np.float32)
@@ -326,7 +338,7 @@ def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: 
     faiss_hits = []
     if index.faiss_index:
         try:
-            q_emb = get_embedding(query)
+            q_emb = get_embedding(query, is_query=True)
             q_emb_arr = np.array([q_emb], dtype=np.float32)
             if q_emb_arr.shape[1] != index.faiss_index.d:
                 PipelineLogger.rag(

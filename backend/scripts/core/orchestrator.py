@@ -155,13 +155,15 @@ def run_dialogue_pipeline(
                 target_config = next((n for n in var_prompt if n.get("id") == resume_target), matched_node)
                 if target_config and (target_config.get("type") == "bridge-node" or not target_config.get("goal")):
                     target_config = matched_node
+                if target_config and not target_config.get("goal"):
+                    next_trans = target_config.get("next", [])
+                    first_target = next_trans[0].get("target") if (isinstance(next_trans, list) and next_trans and isinstance(next_trans[0], dict)) else (next_trans[0] if (isinstance(next_trans, list) and next_trans) else None)
+                    first_child = next((n for n in var_prompt if n.get("id") == first_target), None) if first_target else None
+                    if first_child and first_child.get("type") != "bridge-node":
+                        target_config = first_child
                 active_node_config = target_config
+                next_node_id = active_node_config.get("id")
                 next_trans = active_node_config.get("next", [])
-                if isinstance(next_trans, list) and next_trans:
-                    first = next_trans[0]
-                    next_node_id = first.get("target") if isinstance(first, dict) else first
-                else:
-                    next_node_id = active_node_config.get("id")
                 possible_next_nodes = [t.get("target") for t in next_trans if isinstance(t, dict) and t.get("target")]
             else:
                 if session_instance.active_flow_id and session_instance.active_flow_id != "main" and session_instance.active_flow_id != intent:
@@ -183,21 +185,12 @@ def run_dialogue_pipeline(
 
                 if not matched_node.get("goal") and first_child and first_child.get("type") != "bridge-node":
                     active_node_config = first_child
-                    child_trans = active_node_config.get("next", [])
-                    if isinstance(child_trans, list) and child_trans:
-                        first = child_trans[0]
-                        next_node_id = first.get("target") if isinstance(first, dict) else first
-                    else:
-                        next_node_id = active_node_config.get("id")
-                    possible_next_nodes = [t.get("target") for t in child_trans if isinstance(t, dict) and t.get("target")]
                 else:
                     active_node_config = matched_node
-                    if isinstance(next_trans, list) and next_trans:
-                        first = next_trans[0]
-                        next_node_id = first.get("target") if isinstance(first, dict) else first
-                    else:
-                        next_node_id = active_node_config.get("id")
-                    possible_next_nodes = [t.get("target") for t in next_trans if isinstance(t, dict) and t.get("target")]
+
+                next_node_id = active_node_config.get("id")
+                child_trans = active_node_config.get("next", [])
+                possible_next_nodes = [t.get("target") for t in child_trans if isinstance(t, dict) and t.get("target")]
         else:
             next_node_id, active_node_config, possible_next_nodes = traverse_fsm(
                 user_input=user_input,
@@ -216,7 +209,20 @@ def run_dialogue_pipeline(
     rag_settings = info.get("rag", {})
     rag_scheme = rag_settings.get("ragScheme")
     ext_info = active_node_config.get("ext_info", "disabled") if active_node_config else "disabled"
+
+    is_bridge = active_node_config.get("type") == "bridge-node" if active_node_config else False
+    if is_bridge and (not ext_info or ext_info == "disabled"):
+        ext_info = "reuse"
+
     PipelineLogger.llm_status(f"Pipeline Active Node: {active_node_id}, ext_info: {ext_info}, rag_scheme: {rag_scheme}")
+
+    if rag_scheme and ext_info in ["reuse", "resume", "resum"]:
+        retrieved_chunks = getattr(session_instance, "last_retrieved_chunks", []) or []
+        if retrieved_chunks:
+            PipelineLogger.rag(f"Reusing {len(retrieved_chunks)} cached RAG chunks for node '{active_node_id}'")
+        else:
+            PipelineLogger.rag(f"No cached chunks to reuse for node '{active_node_id}'. Fetching fresh chunks...")
+            ext_info = "fetch"
 
     if rag_scheme and ext_info == "fetch":
         PipelineLogger.rag("Executing Retrieval-Augmented Generation (RAG)")
@@ -229,21 +235,22 @@ def run_dialogue_pipeline(
             pov = "None"
         chunksize = rag_settings.get("chunksize", 4)
         retrieved_chunks = retrieve_hybrid(search_query, rag_scheme, pov, chunksize)
+        session_instance.last_retrieved_chunks = retrieved_chunks
 
-        if retrieved_chunks:
-            rag_context_text = "Retrieved Chunks:\n"
-            for chunk in retrieved_chunks:
-                if isinstance(chunk, dict):
-                    text_val = chunk.get("text_content") or chunk.get("text", "")
-                    chunk_id = chunk.get("chunk_id") or chunk.get("id", "N/A")
-                else:
-                    text_val = str(chunk)
-                    chunk_id = "N/A"
-                rag_context_text += f"- [{chunk_id}]: {text_val}\n"
-                PipelineLogger.rag(f"Retrieved chunk [{chunk_id}]: {text_val[:60]}...")
+    if retrieved_chunks:
+        rag_context_text = "Retrieved Chunks:\n"
+        for chunk in retrieved_chunks:
+            if isinstance(chunk, dict):
+                text_val = chunk.get("text_content") or chunk.get("text", "")
+                chunk_id = chunk.get("chunk_id") or chunk.get("id", "N/A")
+            else:
+                text_val = str(chunk)
+                chunk_id = "N/A"
+            rag_context_text += f"- [{chunk_id}]: {text_val}\n"
+            PipelineLogger.rag(f"Retrieved chunk [{chunk_id}]: {text_val[:60]}...")
 
-            metadata_categories = extract_metadata_categories(retrieved_chunks)
-            PipelineLogger.rag(f"Metadata categories: {metadata_categories}")
+        metadata_categories = extract_metadata_categories(retrieved_chunks)
+        PipelineLogger.rag(f"Metadata categories: {metadata_categories}")
 
     system_prompt = assemble_system_prompt(
         base_prompt=base_prompt,
@@ -302,6 +309,7 @@ User message: {user_input}"""
         "possible_next_nodes": possible_next_nodes,
         "response_stream": response_stream,
         "retrieved_chunks": retrieved_chunks,
+        "last_retrieved_chunks": getattr(session_instance, "last_retrieved_chunks", []),
         "metadata_categories": metadata_categories,
         "active_flow_id": session_instance.active_flow_id,
         "open_topics": session_instance.open_topics,

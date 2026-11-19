@@ -9,7 +9,8 @@ class ChatSession:
         next_node_id=None,
         possible_next_nodes=None,
         active_flow_id="main",
-        open_topics=None
+        open_topics=None,
+        last_retrieved_chunks=None
     ):
         self.character_id = character_id
         self.history = history if history is not None else []
@@ -20,6 +21,7 @@ class ChatSession:
         self.active_loop_id = None
         self.active_flow_id = active_flow_id if active_flow_id is not None else "main"
         self.open_topics = open_topics if open_topics is not None else []
+        self.last_retrieved_chunks = last_retrieved_chunks if last_retrieved_chunks is not None else []
 
 class Session:
     def __init__(self, session_id):

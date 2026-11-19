@@ -6,12 +6,13 @@ const props = defineProps({
 })
 
 const messages     = defineModel('messages',     { default: () => [] })
-const sessionState = defineModel('sessionState', { default: () => ({ active_node_id: null, active_flow_id: 'main', open_topics: [], history: [] }) })
+const sessionState = defineModel('sessionState', { default: () => ({ active_node_id: null, active_flow_id: 'main', open_topics: [], history: [], last_retrieved_chunks: [] }) })
 
 const input   = ref('')
 const loading = ref(false)
 const chatEl  = ref(null)
 const expandedIndex = ref(null)
+const copied = ref(false)
 
 function toggleDebug(index) {
   expandedIndex.value = expandedIndex.value === index ? null : index
@@ -21,6 +22,45 @@ function getNodeName(nodeId) {
   if (!nodeId) return ''
   const node = props.draftConfig?.prompts?.var_prompt?.find(n => n.id === nodeId)
   return node?.displayName || node?.label || ''
+}
+
+function getAssistantNodeName(msg) {
+  if (!msg.debug) return 'node'
+  return msg.debug.step_name || getNodeName(msg.debug.step) || msg.debug.step || 'node'
+}
+
+async function copyLogs() {
+  if (!messages.value.length) return
+
+  const logLines = messages.value.map(msg => {
+    if (msg.role === 'user') {
+      return `[user]\n${msg.text}`
+    } else if (msg.role === 'assistant') {
+      const nodeName = getAssistantNodeName(msg)
+      return `[assistant {${nodeName}}]\n${msg.text}`
+    } else {
+      return `[${msg.role}]\n${msg.text}`
+    }
+  })
+
+  const fullLog = logLines.join('\n\n')
+
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(fullLog)
+    } else {
+      const textArea = document.createElement('textarea')
+      textArea.value = fullLog
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+    }
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 2000)
+  } catch (err) {
+    console.error('Failed to copy logs:', err)
+  }
 }
 
 async function send() {
@@ -43,6 +83,7 @@ async function send() {
           active_flow_id: sessionState.value.active_flow_id || 'main',
           open_topics: sessionState.value.open_topics || [],
           history: sessionState.value.history,
+          last_retrieved_chunks: sessionState.value.last_retrieved_chunks || [],
         },
         user_input: text,
       }),
@@ -79,6 +120,7 @@ async function send() {
         active_flow_id: data.debug?.active_flow_id || 'main',
         open_topics: data.debug?.open_topics || [],
         history: [...sessionState.value.history, { role: 'user', text }, { role: 'assistant', text: data.text }],
+        last_retrieved_chunks: data.last_retrieved_chunks || data.retrieved_chunks || sessionState.value.last_retrieved_chunks || [],
       }
     }
   } catch (e) {
@@ -91,7 +133,7 @@ async function send() {
 
 function resetChat() {
   messages.value = []
-  sessionState.value = { active_node_id: null, active_flow_id: 'main', open_topics: [], history: [] }
+  sessionState.value = { active_node_id: null, active_flow_id: 'main', open_topics: [], history: [], last_retrieved_chunks: [] }
   expandedIndex.value = null
 }
 
@@ -112,7 +154,24 @@ function onKeydown(e) {
   <div class="test-chat">
     <div class="chat-header">
       <span>Test chat</span>
-      <button class="reset-btn" @click="resetChat" title="Reset chat">↺</button>
+      <div class="header-actions">
+        <button
+          class="copy-btn"
+          @click="copyLogs"
+          :title="copied ? 'Copied to clipboard!' : 'Copy log to clipboard'"
+          :disabled="!messages.length"
+        >
+          <svg v-if="!copied" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+          <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <span>{{ copied ? 'Copied' : 'Copy log' }}</span>
+        </button>
+        <button class="reset-btn" @click="resetChat" title="Reset chat">↺</button>
+      </div>
     </div>
 
     <div class="chat-messages" ref="chatEl">
@@ -124,6 +183,9 @@ function onKeydown(e) {
         :class="msg.role"
       >
         <div class="message" :class="msg.role">
+          <div v-if="msg.role === 'assistant' && getAssistantNodeName(msg) !== 'node'" class="msg-node-tag">
+            {{ getAssistantNodeName(msg) }}
+          </div>
           <div
             class="bubble"
             :class="{ error: msg.error, 'has-debug': !!msg.debug }"
@@ -245,6 +307,37 @@ function onKeydown(e) {
   flex-shrink: 0;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.copy-btn {
+  background: #f1f5f9;
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.copy-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+.copy-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .reset-btn {
   background: none;
   color: var(--text-muted);
@@ -257,6 +350,21 @@ function onKeydown(e) {
 .reset-btn:hover {
   color: var(--text);
   background: var(--bg-light);
+}
+
+.msg-node-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #4f46e5;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 4px;
+  padding: 0.05rem 0.4rem;
+  margin-bottom: 0.25rem;
+  max-width: 85%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat-messages {
@@ -285,6 +393,8 @@ function onKeydown(e) {
 
 .message.assistant {
   justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .message-item {

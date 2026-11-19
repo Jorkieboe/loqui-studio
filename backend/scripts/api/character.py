@@ -337,7 +337,8 @@ async def test_draft(payload: dict):
             current_node_id=active_node_id,
             history=history,
             active_flow_id=active_flow_id,
-            open_topics=open_topics
+            open_topics=open_topics,
+            last_retrieved_chunks=session_state.get("last_retrieved_chunks", []) or []
         )
         pipeline_result = run_dialogue_pipeline(
             user_input=user_input,
@@ -397,6 +398,7 @@ async def test_draft(payload: dict):
             "text": response_text,
             "next_node_id": pipeline_result["next_node_id"],
             "retrieved_chunks": pipeline_result["retrieved_chunks"],
+            "last_retrieved_chunks": pipeline_result.get("last_retrieved_chunks", []),
             "metadata_categories": pipeline_result["metadata_categories"],
             "character": char_name,
             "step": step_val,

@@ -146,7 +146,7 @@ const NODE_DEFAULTS = {
   'silence':             { node_class: 'prompt', displayName: 'Silence',  goal: '', tone: '', example: '', next: [] },
   'start-node':          { node_class: 'flow',   displayName: 'Start',   next: [] },
   'end-node':            { node_class: 'flow',   displayName: 'End',     next: [] },
-  'bridge-node':         { node_class: 'flow',   type: 'bridge-node', displayName: 'Bridge', goal: '', next: [] },
+  'bridge-node':         { node_class: 'flow',   type: 'bridge-node', displayName: 'Bridge', goal: '', ext_info: 'reuse', next: [] },
   'loop-node':           { node_class: 'flow',   displayName: 'Loop',    loop_count: 3, next: [] },
   'cycle-node':          { node_class: 'flow',   displayName: 'Cycle',   next: [] },
   'reactive-flow':       { node_class: 'reactive', mode: 'flow', displayName: 'Reactive Flow', trigger_intent: '', flow_label: '', next: [] },
@@ -516,7 +516,15 @@ onBeforeUnmount(() => {
               <label>Custom wrap-up directive (optional)</label>
               <textarea v-model="selectedNode.goal" rows="4" placeholder="Leave blank to use default bridge wrap-up instruction." />
             </div>
-            <p class="field-hint">Wraps up the sub-flow and prompts the user to return to shelved open topics.</p>
+            <div class="field">
+              <label>Information retrieval</label>
+              <select v-model="selectedNode.ext_info">
+                <option value="reuse">Reuse last info (default)</option>
+                <option value="fetch">Fetch fresh info</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </div>
+            <p class="field-hint">Wraps up the sub-flow, reuses external context by default, and prompts the user to return to shelved open topics.</p>
           </template>
 
           <!-- Flow: start / end / cycle -->
@@ -640,7 +648,7 @@ onBeforeUnmount(() => {
                 <select v-model="selectedNode.ext_info">
                   <option value="disabled">Disabled</option>
                   <option value="fetch">Fetch</option>
-                  <option value="resum">Resume</option>
+                  <option value="reuse">Reuse</option>
                 </select>
               </div>
             </template>

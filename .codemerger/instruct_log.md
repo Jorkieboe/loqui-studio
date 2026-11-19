@@ -114,3 +114,9 @@ Earlier in the intent function to look for the intent of the user i said we shou
 
 ---
 
+## [2026-11-19 11:47:16] • Instruct Input
+
+I am mostly using an e5 model which for Rag to work we need to use 'query:' as prefix before we searching.. Could you implement something that we it detects it is a e5 it set that before the query before it goes into embeddings to compare
+
+---
+

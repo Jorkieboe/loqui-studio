@@ -6,6 +6,7 @@ class SessionState(BaseModel):
     history: List[Dict[str, str]] = Field(default_factory=list)
     active_flow_id: Optional[str] = "main"
     open_topics: List[Dict[str, Any]] = Field(default_factory=list)
+    last_retrieved_chunks: Optional[List[Any]] = Field(default_factory=list)
 
 class DraftConfig(BaseModel):
     info: Dict[str, Any] = Field(default_factory=dict)

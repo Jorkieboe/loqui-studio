@@ -201,7 +201,14 @@ def traverse_fsm(user_input: str, active_node_id: str, layout: dict, var_prompt:
     # Resolve target active node configuration
     next_node_config = next((node for node in var_prompt if node.get("id") == next_node_id), None)
     if not next_node_config:
-        next_node_config = active_node
+        if active_node and active_node.get("type") == "bridge-node":
+            main_prompt = next((n for n in var_prompt if n.get("node_class") == "prompt" and n.get("type") != "bridge-node"), None)
+            if main_prompt:
+                next_node_config = main_prompt
+                next_node_id = main_prompt.get("id")
+        if not next_node_config:
+            next_node_config = active_node
+            next_node_id = active_node.get("id") if active_node else next_node_id
 
     possible_next_nodes = []
     if next_node_config:
