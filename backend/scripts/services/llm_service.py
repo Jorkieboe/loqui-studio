@@ -12,6 +12,13 @@ load_dotenv()
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CONFIG_PATH = os.path.join(BACKEND_DIR, "config.json")
 
+def _is_preset_value_set(value: Any) -> bool:
+    if value is None or value == "":
+        return False
+    if isinstance(value, (list, dict)) and len(value) == 0:
+        return False
+    return True
+
 def load_preset_config(preset_name: str = "default") -> Dict[str, Any]:
     if os.path.exists(CONFIG_PATH):
         try:
@@ -19,7 +26,7 @@ def load_preset_config(preset_name: str = "default") -> Dict[str, Any]:
                 config = json.load(f)
                 return config.get("llm_presets", {}).get(preset_name, {})
         except Exception as e:
-            logger.error(f"Failed to load llm_presets config: {e}")
+            PipelineLogger.error("Failed to load llm_presets config", e)
     return {
         "model": "gpt-4o-mini",
         "temperature": 0.7,
@@ -46,32 +53,38 @@ def api_request(
 ) -> Any:
     preset = load_preset_config(preset_name)
     api_key = os.environ.get("OPENAI_API_KEY")
+    model_name = preset.get("model") or "gpt-4o-mini"
     input_text = "".join([m.get("content", "") for m in messages])
-    input_tokens = count_tokens(input_text, preset.get("model", "gpt-4o-mini"))
+    input_tokens = count_tokens(input_text, model_name)
     PipelineLogger.llm_status(f"Input token count calculated: {input_tokens}")
     from scripts.services.ollama_service import is_ollama_available, load_ollama_config
     ollama_cfg = load_ollama_config()
     ollama_active = ollama_cfg.get("llm_enabled", True) and is_ollama_available()
     base_url = None
-    model_name = preset.get("model", "gpt-4o-mini")
     if ollama_active:
         host = ollama_cfg.get("host", "http://127.0.0.1:11434").rstrip("/")
         model_name = ollama_cfg.get("llm_model", "llama3")
         PipelineLogger.llm_status(f"Routing request to Ollama native chat API: {model_name} at {host}")
         url = f"{host}/api/chat"
+        options = {}
+        ollama_param_map = {
+            "temperature": "temperature",
+            "max_tokens": "num_predict",
+            "presence_penalty": "presence_penalty",
+            "frequency_penalty": "frequency_penalty",
+            "stop": "stop",
+        }
+        for preset_key, ollama_key in ollama_param_map.items():
+            val = preset.get(preset_key)
+            if _is_preset_value_set(val):
+                options[ollama_key] = val
         payload = {
             "model": model_name,
             "messages": messages,
             "stream": stream,
-            "options": {
-                "temperature": preset.get("temperature", 0.7),
-                "num_predict": preset.get("max_tokens", 150),
-                "presence_penalty": preset.get("presence_penalty", 0.0),
-                "frequency_penalty": preset.get("frequency_penalty", 0.0),
-            }
         }
-        if preset.get("stop"):
-            payload["options"]["stop"] = preset["stop"]
+        if options:
+            payload["options"] = options
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
             url,
@@ -141,14 +154,13 @@ def api_request(
     kwargs = {
         "model": model_name,
         "messages": messages,
-        "temperature": preset.get("temperature", 0.7),
-        "max_tokens": preset.get("max_tokens", 150),
-        "presence_penalty": preset.get("presence_penalty", 0.0),
-        "frequency_penalty": preset.get("frequency_penalty", 0.0),
         "stream": stream,
     }
-    if preset.get("stop"):
-        kwargs["stop"] = preset["stop"]
+    for key, val in preset.items():
+        if key in ("model", "messages", "stream"):
+            continue
+        if _is_preset_value_set(val):
+            kwargs[key] = val
     safe_kwargs = {k: v for k, v in kwargs.items() if k != "messages"}
     PipelineLogger.llm_status("Request parameters initialized", safe_kwargs)
     try:

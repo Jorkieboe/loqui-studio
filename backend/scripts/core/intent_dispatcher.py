@@ -39,7 +39,7 @@ def build_intent_tools(
             f"{trigger_intent}. "
             f"Select ONLY when the user's latest message clearly expresses this intent. "
             f"Do not select based on incidental keyword mentions."
-            )     
+            )
         else:
             description = trigger_intent
 
@@ -214,13 +214,17 @@ def evaluate_intent(
             preset = load_preset_config("default")
             client = OpenAI(api_key=api_key)
 
-            response = client.chat.completions.create(
-                model=preset.get("model", "gpt-4o-mini"),
-                messages=messages,
-                tools=tools,
-                tool_choice="auto",
-                temperature=0.0
-            )
+            intent_kwargs = {
+                "model": preset.get("model") or "gpt-4o-mini",
+                "messages": messages,
+                "tools": tools,
+                "tool_choice": "auto",
+            }
+            temp_val = preset.get("temperature")
+            if temp_val is not None and temp_val != "":
+                intent_kwargs["temperature"] = 0.0
+
+            response = client.chat.completions.create(**intent_kwargs)
 
             msg = response.choices[0].message
             available_tool_names = [t["function"]["name"] for t in tools]

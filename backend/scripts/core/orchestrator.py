@@ -11,7 +11,7 @@ def assemble_bridge_directive(open_topics: list) -> str:
         last_topic = open_topics[-1]
         label = last_topic.get("flow_label") or last_topic.get("flow_id", "previous topic")
         return f"Wrap up the current topic concisely, then ask the user if they'd like to return to {label}."
-    return "Conclude the current topic concisely and ask the user how else you can help them."
+    return "Conclude the current topic naturally without forcing a question. Do not ask generic helpdesk questions like 'how else can I help' or invent new questions to keep the chat going."
 
 def assemble_system_prompt(
     base_prompt: str,
@@ -123,7 +123,12 @@ def run_dialogue_pipeline(
             loop_state=loop_state
         )
         if active_node_config and active_node_config.get("type") == "bridge-node":
-            bridge_directive = assemble_bridge_directive(session_instance.open_topics)
+            if session_instance.open_topics:
+                bridge_directive = assemble_bridge_directive(session_instance.open_topics)
+            elif active_node_config.get("goal") and active_node_config.get("goal").strip():
+                bridge_directive = active_node_config.get("goal").strip()
+            else:
+                bridge_directive = assemble_bridge_directive([])
             previous_flow = session_instance.active_flow_id
             session_instance.active_flow_id = "main"
             PipelineLogger.flow(f"Flow transition via bridge '{active_node_config.get('id')}': '{previous_flow}' -> 'main'")
@@ -289,6 +294,8 @@ def run_dialogue_pipeline(
 - Address the user's message while strictly executing your CURRENT GOAL.
 - Avoid repeating yourself, and do not repeat facts, phrases, or sentence structures you have already used.
 - Speak naturally from your character's persona and time period. If something is beyond your realistic knowledge, express natural ignorance or deflect in character.
+- Natural conversation flow: Do NOT end every turn with a question. Only ask a question if your current goal strictly requires it. Statements, casual reactions, or friendly sign-offs are preferred.
+- Do NOT use robotic chatbot filler or customer-service praise (e.g. 'Zeker weten!', 'Goede keuze!', 'Ah, dat klinkt goed!', 'Lekker, toch?'). Respond authentically as a human.
 
 User message: {user_input}"""
 
