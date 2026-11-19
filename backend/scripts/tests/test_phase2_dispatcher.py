@@ -38,7 +38,7 @@ def test_tool_generation():
     print("  ✓ Dynamic tool schemas constructed accurately with unified resumption descriptions.")
 
 def test_intent_dispatcher():
-    print("[2/3] Testing intent dispatcher matching with last 3 history responses...")
+    print("[2/3] Testing intent dispatcher matching with last assistant response...")
     reactive_nodes = [
         {
             "id": "reactive_dining",

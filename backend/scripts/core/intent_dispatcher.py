@@ -36,9 +36,10 @@ def build_intent_tools(
         if node_id in shelved_flow_ids:
             shelved_label = shelved_flow_ids[node_id]
             description = (
-                f"{trigger_intent} (Also select this if the user wants to resume/return to the "
-                f"previously discussed topic about {shelved_label})"
-            )
+            f"{trigger_intent}. "
+            f"Select ONLY when the user's latest message clearly expresses this intent. "
+            f"Do not select based on incidental keyword mentions."
+            )     
         else:
             description = trigger_intent
 
@@ -127,7 +128,15 @@ def evaluate_intent(
 
     tools = build_intent_tools(reactive_nodes, active_flow=active_flow, open_topics=open_topics)
 
-    context_turns = history[-6:] if history else []
+    last_assistant_msg = None
+    if history:
+        for turn in reversed(history):
+            if isinstance(turn, dict):
+                role = turn.get("role", "")
+                if role in ["assistant", "character", "ai"]:
+                    last_assistant_msg = turn.get("content") or turn.get("text", "")
+                    break
+
     shelved_info = ""
     if open_topics:
         topic_summaries = [f"'{t.get('flow_id')}' (topic: {t.get('flow_label')})" for t in open_topics]
@@ -137,28 +146,65 @@ def evaluate_intent(
             "(e.g., saying 'yes', 'sure', or mentioning the topic name), you MUST call that topic's tool to resume it."
         )
 
+    system_prompt = f"""
+        You are an intent classification and conversation routing coordinator.
+
+        Your ONLY responsibility is to classify the user's latest message
+        and select the appropriate flow.
+
+        CURRENT STATE:
+        - Active flow: {active_flow}
+        - Shelved topics: {shelved_info}
+
+        CLASSIFICATION RULES:
+
+        1. PRIORITIZE THE LATEST USER MESSAGE.
+        Classify what the user actually wants now, not what they
+        previously discussed.
+
+        2. REACTIVE TOPICS:
+        Select a reactive topic ONLY when the user's message clearly
+        expresses an intent that matches that topic's description.
+
+        3. RESUMING SHELVED TOPICS:
+        A shelved topic should ONLY be resumed when:
+        - The user explicitly asks to return to that topic.
+        - The user refers to that topic unambiguously.
+        - The previous assistant message explicitly offered to return
+            to that topic and the user accepts that offer.
+
+        4. CONTINUING CURRENT FLOW:
+        If the user is asking something unrelated to reactive topics,
+        continue the current flow.
+
+        5. AMBIGUOUS MESSAGES:
+        Messages such as "yes", "okay", "sure", "thanks", and "alright"
+        must NOT automatically trigger a shelved topic.
+        Interpret them using the previous assistant message.
+        If there is insufficient context, continue the current flow.
+
+        6. NEGATION:
+        Never select a topic simply because its name appears in a
+        sentence that rejects, denies, or discusses avoiding that topic.
+
+        7. DO NOT GUESS:
+        If no reactive topic clearly matches the user's intent,
+        select resume_current_flow.
+
+        IMPORTANT:
+        - A keyword match is not sufficient.
+        - Do not favor any particular topic.
+        - Select exactly one tool.
+        - The default is resume_current_flow.
+        """
+
     messages = [
         {
             "role": "system",
-            "content": (
-                "You are an intent classification routing coordinator.\n"
-                "Analyze the conversation history and the latest user message.\n"
-                f"Current active flow: '{active_flow}'.{shelved_info}\n"
-                "Determine if the user is triggering a reactive topic, resuming a shelved open topic, "
-                "or continuing the current flow. Call the appropriate tool function."
-            )
+            "content": system_prompt
         }
     ]
-
-    for turn in context_turns:
-        if isinstance(turn, dict):
-            role = turn.get("role", "user")
-            content = turn.get("content") or turn.get("text", "")
-            if role in ["user", "assistant"]:
-                messages.append({"role": role, "content": content})
-        elif isinstance(turn, str):
-            messages.append({"role": "user", "content": turn})
-
+    messages.append({"role": "assistent", "content": last_assistant_msg})
     messages.append({"role": "user", "content": user_input})
 
     api_key = os.environ.get("OPENAI_API_KEY")
@@ -177,17 +223,19 @@ def evaluate_intent(
             )
 
             msg = response.choices[0].message
+            available_tool_names = [t["function"]["name"] for t in tools]
             if msg.tool_calls:
                 selected_tool = msg.tool_calls[0].function.name
-                valid_names = {t["function"]["name"] for t in tools}
-                if selected_tool in valid_names:
-                    PipelineLogger.llm_status(f"Intent Dispatcher tool selected: {selected_tool}")
+                if selected_tool in available_tool_names:
+                    PipelineLogger.llm_status(f"Intent Dispatcher tool selected: '{selected_tool}' | Available tools: {available_tool_names}")
                     return selected_tool
 
+            PipelineLogger.llm_status(f"Intent Dispatcher defaulted to 'resume_current_flow' | Available tools: {available_tool_names}")
             return "resume_current_flow"
         except Exception as e:
             logger.warning(f"Intent classification API call failed: {e}. Using fallback classifier.")
 
+    available_tool_names = [t["function"]["name"] for t in tools]
     fallback_intent = _fallback_intent_match(user_input, reactive_nodes, active_flow=active_flow, open_topics=open_topics)
-    PipelineLogger.llm_status(f"Intent Dispatcher fallback evaluated: {fallback_intent}")
+    PipelineLogger.llm_status(f"Intent Dispatcher fallback evaluated: '{fallback_intent}' | Available tools: {available_tool_names}")
     return fallback_intent

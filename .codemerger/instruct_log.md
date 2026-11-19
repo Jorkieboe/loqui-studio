@@ -90,3 +90,27 @@ Default prompt: Work on todo.md
 
 ---
 
+## [2026-11-16 18:27:53] • Instruct Input
+
+Why can't i disconnect the reactive flow from the bridge i need to be able to place shit between.
+
+---
+
+## [2026-11-16 21:42:20] • Instruct Input
+
+implement this solution in the code
+
+---
+
+## [2026-11-16 22:04:24] • Instruct Input
+
+Can we add a logging message when a flow changes both when it is activated from a reactive and also when moving back to the main flow via a bridge
+
+---
+
+## [2026-11-18 17:52:41] • Instruct Input
+
+Earlier in the intent function to look for the intent of the user i said we should keep an history of three turns to find out the good intent. I do not think is gonna work. we should only do the last ai response + users current response
+
+---
+

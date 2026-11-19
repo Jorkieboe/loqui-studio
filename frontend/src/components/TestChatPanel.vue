@@ -17,6 +17,12 @@ function toggleDebug(index) {
   expandedIndex.value = expandedIndex.value === index ? null : index
 }
 
+function getNodeName(nodeId) {
+  if (!nodeId) return ''
+  const node = props.draftConfig?.prompts?.var_prompt?.find(n => n.id === nodeId)
+  return node?.displayName || node?.label || ''
+}
+
 async function send() {
   const text = input.value.trim()
   if (!text || loading.value) return
@@ -50,6 +56,7 @@ async function send() {
       const debugPayload = data.debug || {
         character: data.character,
         step: data.step,
+        step_name: data.step_name,
         pov: data.pov,
         chunks: data.chunks || [],
         active_flow_id: data.active_flow_id || 'main',
@@ -137,7 +144,8 @@ function onKeydown(e) {
           </div>
           <div class="debug-row">
             <span class="debug-key">Step:</span>
-            <span class="debug-val step-tag">{{ msg.debug.step || 'N/A' }}</span>
+            <span class="debug-val step-tag">{{ msg.debug.step_name || getNodeName(msg.debug.step) || msg.debug.step || 'N/A' }}</span>
+            <span v-if="msg.debug.step && (msg.debug.step_name || getNodeName(msg.debug.step)) !== msg.debug.step" class="debug-id-badge">#{{ msg.debug.step }}</span>
           </div>
           <div class="debug-row">
             <span class="debug-key">Flow ID:</span>
@@ -161,7 +169,7 @@ function onKeydown(e) {
           <div v-else class="debug-topics-list">
             <div v-for="(topic, tIdx) in msg.debug.open_topics" :key="tIdx" class="debug-topic-item">
               <span class="topic-label">{{ topic.flow_label || topic.flow_id }}</span>
-              <span class="topic-node">paused: {{ topic.paused_node_id || 'N/A' }}</span>
+              <span class="topic-node">paused: {{ getNodeName(topic.paused_node_id) || topic.paused_node_id || 'N/A' }}</span>
             </div>
           </div>
 
@@ -364,7 +372,16 @@ function onKeydown(e) {
   color: #4f46e5;
   padding: 0.05rem 0.35rem;
   border-radius: 4px;
+  font-weight: 600;
+}
+
+.debug-id-badge {
   font-family: monospace;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  background: #f1f5f9;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
 }
 
 .flow-tag {

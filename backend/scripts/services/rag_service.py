@@ -451,10 +451,11 @@ def extract_metadata_categories(chunks: List[Dict[str, Any]]) -> Dict[str, List[
                 categories[key].add(str(val))
     return {k: sorted(list(v)) for k, v in categories.items()}
 
-def rewrite_query(user_message: str, history: List[Dict[str, str]]) -> str:
-    if not history:
+def rewrite_query(user_message: str, history: List[Dict[str, str]], current_goal: str = "") -> str:
+    # [MODIFIED] Check both history and current_goal before skipping query formulation
+    if not history and not current_goal:
         return user_message
-    context_turns = history[-3:]
+    context_turns = history[-3:] if history else []
     formatted_history = ""
     for turn in context_turns:
         if isinstance(turn, str):
@@ -463,26 +464,29 @@ def rewrite_query(user_message: str, history: List[Dict[str, str]]) -> str:
             role = turn.get("role", "user")
             text = turn.get("text", turn.get("content", ""))
             formatted_history += f"{role.upper()}: {text}\n"
+    goal_part = f"\nCurrent Active Dialogue Goal / Topic:\n{current_goal}\n" if current_goal else ""
     prompt = f"""
-        Given the following conversational turn history and the user's latest query,
-        rewrite the query to be a self-contained, descriptive search query in the same language.
-        Ensure you incorporate the context of the last AI response to fully resolve pronouns,
-        references, or implicit details.
-        Keep it concise, and do not answer it. Only return the rewritten query text.
-
+        Given the conversational history, the active dialogue goal/topic, and the user's latest query,
+        formulate a focused, descriptive search query in the same language for retrieving relevant historical context.
+        Combine the user's query with the active dialogue goal/topic so that the search captures both,
+        while keeping the user's query leading.
+        Keep it concise, and do not answer the query. Only return the search query text.
+        {goal_part}
         History:
         {formatted_history}
 
         New Query: {user_message}
 
-        Rewritten Query:
+        Search Query:
     """
     try:
-
         rewritten = api_request([{"role": "user", "content": prompt}], stream=False)
         if rewritten and isinstance(rewritten, str):
-            PipelineLogger.rag(rewritten.strip())
-            return rewritten.strip()
+            cleaned = rewritten.strip().strip('"').strip("'")
+            PipelineLogger.rag(f"Combined RAG search query: '{cleaned}'")
+            return cleaned
     except Exception as e:
         logger.error(f"Query rewriting failed: {e}")
+    if current_goal:
+        return f"{user_message} {current_goal}".strip()
     return user_message

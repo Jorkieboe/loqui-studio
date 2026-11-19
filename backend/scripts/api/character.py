@@ -371,10 +371,19 @@ async def test_draft(payload: dict):
                 })
 
         step_val = pipeline_result.get("active_step") or active_node_id or "start"
+        step_name = pipeline_result.get("active_step_name")
+        if not step_name or step_name == step_val:
+            var_nodes = prompts.get("var_prompt", [])
+            matched = next((n for n in var_nodes if n.get("id") == step_val), None)
+            if matched:
+                step_name = matched.get("displayName") or matched.get("label") or step_val
+        if not step_name:
+            step_name = step_val
 
         debug_payload = {
             "character": char_name,
             "step": step_val,
+            "step_name": step_name,
             "pov": pov_val,
             "chunks": chunks_formatted,
             "active_flow_id": pipeline_result.get("active_flow_id", "main"),
@@ -391,6 +400,7 @@ async def test_draft(payload: dict):
             "metadata_categories": pipeline_result["metadata_categories"],
             "character": char_name,
             "step": step_val,
+            "step_name": step_name,
             "pov": pov_val,
             "chunks": chunks_formatted,
             "debug": debug_payload

@@ -8,6 +8,7 @@ custom_theme = Theme({
     "llm_status": "bold yellow",
     "llm_output": "green",
     "transcription": "bold magenta",
+    "flow": "bold blue",
     "info": "dim white",
     "error": "bold red"
 })
@@ -39,6 +40,13 @@ class PipelineLogger:
     @staticmethod
     def transcription(text: str):
         console.print(f"[transcription][STT][/transcription] Transcribed: '{text}'")
+
+    @staticmethod
+    def flow(message: str, details: Any = None):
+        if details is not None:
+            console.print(f"[flow][FLOW][/flow] {message} - {details}")
+        else:
+            console.print(f"[flow][FLOW][/flow] {message}")
 
     @staticmethod
     def info(message: str):

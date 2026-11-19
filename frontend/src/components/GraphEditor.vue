@@ -16,10 +16,11 @@ const emit = defineEmits([
   'removeNodes', 'updatePositions',
 ])
 
-const { onNodeClick, fitView, onNodesChange, onEdgesChange, onConnect, onNodeDragStop } = useVueFlow()
+const { onNodeClick, onEdgeContextMenu, onEdgeUpdate, fitView, onNodesChange, onEdgesChange, onConnect, onNodeDragStop } = useVueFlow()
 
 const nodes        = ref([])
 const edges        = ref([])
+const edgeCache    = new Map()
 const selectedId   = ref(null)
 const showAddMenu  = ref(false)
 
@@ -60,14 +61,19 @@ function buildGraph() {
     const isLoop = n.type === 'loop-node'
     ;(n.next || []).forEach((conn, i) => {
       if (!conn.target) return
-      allEdges.push({
-        id:           `e_${n.id}__${conn.target}__${i}`,
+      const edgeId = `e_${n.id}__${conn.target}__${i}`
+      const edgeObj = {
+        id:           edgeId,
         source:       n.id,
         target:       conn.target,
         sourceHandle: isLoop ? (i === 0 ? 'loop-body' : 'loop-exit') : null,
+        updatable:    true,
+        interactionWidth: 20,
         animated:     false,
         style:        { stroke: '#1a1a1a', strokeWidth: 2 },
-      })
+      }
+      edgeCache.set(edgeId, { source: n.id, target: conn.target, sourceHandle: edgeObj.sourceHandle })
+      allEdges.push(edgeObj)
     })
   }
   edges.value = allEdges
@@ -86,13 +92,51 @@ onConnect((connection) => {
   })
 })
 
+onEdgeContextMenu(({ event, edge }) => {
+  event.preventDefault()
+  if (edge) {
+    emit('disconnectEdges', [{
+      source: edge.source,
+      target: edge.target,
+      sourceHandle: edge.sourceHandle || null,
+    }])
+  }
+})
+
+onEdgeUpdate(({ edge, connection }) => {
+  emit('disconnectEdges', [{
+    source: edge.source,
+    target: edge.target,
+    sourceHandle: edge.sourceHandle || null,
+  }])
+  emit('connectEdge', {
+    source: connection.source,
+    target: connection.target,
+    sourceHandle: connection.sourceHandle || null,
+  })
+})
+
 onEdgesChange((changes) => {
   const removals = changes.filter(c => c.type === 'remove')
   if (!removals.length) return
-  const removed = removals
-    .map(c => edges.value.find(e => e.id === c.id))
-    .filter(Boolean)
-    .map(e => ({ source: e.source, target: e.target, sourceHandle: e.sourceHandle || null }))
+  const removed = []
+  for (const c of removals) {
+    let edgeData = edgeCache.get(c.id) || edges.value.find(e => e.id === c.id)
+    if (!edgeData && c.id && c.id.startsWith('e_')) {
+      const parts = c.id.slice(2).split('__')
+      if (parts.length >= 2) {
+        edgeData = { source: parts[0], target: parts[1], sourceHandle: null }
+      }
+    }
+    if (edgeData) {
+      removed.push({
+        source: edgeData.source,
+        target: edgeData.target,
+        sourceHandle: edgeData.sourceHandle || null,
+      })
+      edgeCache.delete(c.id)
+    }
+  }
   if (removed.length) emit('disconnectEdges', removed)
 })
 
@@ -125,6 +169,9 @@ onMounted(() => setTimeout(() => fitView(), 100))
       :default-zoom="1"
       :min-zoom="0.3"
       :max-zoom="2"
+      :edges-updatable="true"
+      :edges-focusable="true"
+      :delete-key-code="['Backspace', 'Delete']"
       fit-view-on-init
       class="vue-flow-graph"
     >
@@ -273,6 +320,17 @@ onMounted(() => setTimeout(() => fitView(), 100))
   width: 10px; height: 10px;
   background: #3DCFAC;
   border: 2px solid white;
+}
+
+:deep(.vue-flow__edge-path) {
+  cursor: pointer;
+}
+:deep(.vue-flow__edge:hover .vue-flow__edge-path) {
+  stroke: #3DCFAC;
+}
+:deep(.vue-flow__edge.selected .vue-flow__edge-path) {
+  stroke: #e53e3e;
+  stroke-width: 3px;
 }
 
 /* Flow pills */

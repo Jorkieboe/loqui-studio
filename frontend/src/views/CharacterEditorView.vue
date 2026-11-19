@@ -170,20 +170,34 @@ function onConnectEdge({ source, target, sourceHandle }) {
     if (!node.next.find(c => c.target === target))
       node.next.push({ target })
   }
+  layout.value.connections = [
+    ...(layout.value.connections || []).filter(c => !(c.source === source && c.target === target)),
+    {
+      id: `conn_${source}__${target}`,
+      source,
+      sourceOutput: sourceHandle || 'out',
+      target,
+      targetInput: 'in',
+      data: { label: '' },
+    },
+  ]
   resetChat()
 }
 
 function onDisconnectEdges(connections) {
   for (const { source, target, sourceHandle } of connections) {
     const node = prompts.value.var_prompt?.find(n => n.id === source)
-    if (!node) continue
-
-    if (node.type === 'loop-node') {
-      const idx = sourceHandle === 'loop-body' ? 0 : 1
-      if (node.next?.[idx]?.target === target) node.next.splice(idx, 1)
-    } else {
-      node.next = (node.next || []).filter(c => c.target !== target)
+    if (node) {
+      if (node.type === 'loop-node') {
+        const idx = sourceHandle === 'loop-body' ? 0 : 1
+        if (node.next?.[idx]?.target === target) node.next.splice(idx, 1)
+      } else {
+        node.next = (node.next || []).filter(c => c.target !== target)
+      }
     }
+    layout.value.connections = (layout.value.connections || []).filter(
+      c => !(c.source === source && c.target === target)
+    )
   }
   resetChat()
 }

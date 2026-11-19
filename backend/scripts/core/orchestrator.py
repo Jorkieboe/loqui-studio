@@ -44,8 +44,8 @@ def assemble_system_prompt(
         system_prompt += "\n"
 
     if active_node_config:
-        system_prompt += "CURRENT GOAL (VAR PROMPT):\n"
-        system_prompt += "This represents your immediate objective in the conversation. You must direct your response toward satisfying this goal.\n"
+        system_prompt += "CURRENT GOAL (STRICTLY LEADING):\n"
+        system_prompt += "This goal is your primary objective. It takes precedence over general background facts and must always be addressed in your response.\n"
         goal = active_node_config.get("goal")
         tone = active_node_config.get("tone")
         example = active_node_config.get("example")
@@ -106,6 +106,8 @@ def run_dialogue_pipeline(
             open_topics=session_instance.open_topics
         )
 
+    available_tool_names = [t.get("function", {}).get("name") for t in dynamic_tools]
+    PipelineLogger.flow(f"Intent resolved: '{intent}' | Available tools: {available_tool_names}")
     PipelineLogger.llm_status(f"Pipeline evaluated intent: '{intent}', current active_flow: '{session_instance.active_flow_id}'")
 
     bridge_directive = ""
@@ -122,7 +124,9 @@ def run_dialogue_pipeline(
         )
         if active_node_config and active_node_config.get("type") == "bridge-node":
             bridge_directive = assemble_bridge_directive(session_instance.open_topics)
+            previous_flow = session_instance.active_flow_id
             session_instance.active_flow_id = "main"
+            PipelineLogger.flow(f"Flow transition via bridge '{active_node_config.get('id')}': '{previous_flow}' -> 'main'")
     else:
         matched_node = next((n for n in reactive_nodes if n.get("id") == intent), None)
         if matched_node and matched_node.get("mode") == "standalone":
@@ -144,7 +148,9 @@ def run_dialogue_pipeline(
                         "flow_label": curr_label,
                         "paused_node_id": active_node_id
                     })
+                previous_flow = session_instance.active_flow_id
                 session_instance.active_flow_id = intent
+                PipelineLogger.flow(f"Flow resumed from open topics: '{previous_flow}' -> '{intent}'")
                 resume_target = shelved.get("paused_node_id") or intent
                 target_config = next((n for n in var_prompt if n.get("id") == resume_target), matched_node)
                 if target_config and (target_config.get("type") == "bridge-node" or not target_config.get("goal")):
@@ -166,7 +172,9 @@ def run_dialogue_pipeline(
                         "flow_label": curr_label,
                         "paused_node_id": active_node_id
                     })
+                previous_flow = session_instance.active_flow_id
                 session_instance.active_flow_id = intent
+                PipelineLogger.flow(f"Flow activated from reactive node '{intent}': '{previous_flow}' -> '{intent}'")
 
                 # If reactive flow node has no direct goal, advance into its first child prompt node
                 next_trans = matched_node.get("next", [])
@@ -212,8 +220,9 @@ def run_dialogue_pipeline(
 
     if rag_scheme and ext_info == "fetch":
         PipelineLogger.rag("Executing Retrieval-Augmented Generation (RAG)")
-        search_query = rewrite_query(user_input, history)
-        PipelineLogger.rag(f"Rewritten search query: '{search_query}'")
+        node_goal = active_node_config.get("goal", "") if active_node_config else ""
+        search_query = rewrite_query(user_input, history, current_goal=node_goal)
+        PipelineLogger.rag(f"Combined RAG search query: '{search_query}'")
 
         pov = rag_settings.get("pov")
         if pov is None or str(pov).strip().lower() in ["none", "null", ""]:
@@ -230,7 +239,7 @@ def run_dialogue_pipeline(
                 else:
                     text_val = str(chunk)
                     chunk_id = "N/A"
-                rag_context_text += f"- {text_val}\n"
+                rag_context_text += f"- [{chunk_id}]: {text_val}\n"
                 PipelineLogger.rag(f"Retrieved chunk [{chunk_id}]: {text_val[:60]}...")
 
             metadata_categories = extract_metadata_categories(retrieved_chunks)
@@ -245,6 +254,8 @@ def run_dialogue_pipeline(
         bridge_directive=bridge_directive
     )
 
+    PipelineLogger.llm_status(system_prompt)
+
     api_messages = [{"role": "system", "content": system_prompt}]
     for turn in history:
         if isinstance(turn, str):
@@ -255,21 +266,31 @@ def run_dialogue_pipeline(
             if role in ["user", "assistant"]:
                 api_messages.append({"role": role, "content": text})
 
-    user_payload = f"""{
-    f"Retrieved historical context info:\n{rag_context_text}\n\n"
-        if rag_context_text else ""
-    }
-    Instructions: Review your previous responses in the dialogue history to ensure you do not repeat facts, phrases, or sentence structures you have already used.
-    Avoid repeating yourself. Additionally, think carefully about whether your character would realistically know the retrieved historical information or the details being asked based on their setting and background.
-    Do not speak of things outside your character's realistic perspective. If it is beyond their knowledge, deflect or state your ignorance naturally while staying strictly in character.
+    rag_section = ""
+    if rag_context_text:
+        rag_section = (
+            "--- BACKGROUND REFERENCE KNOWLEDGE (SECONDARY) ---\n"
+            f"{rag_context_text}\n"
+            "CRITICAL INSTRUCTIONS FOR REFERENCE KNOWLEDGE:\n"
+            "- Your CURRENT GOAL is strictly leading. Do NOT replace, skip, or derail your goal to recite these facts.\n"
+            "- Use these reference facts ONLY as supporting background to enrich your answer while fulfilling your goal.\n"
+            "- If any reference detail is not directly relevant to your current goal and character perspective, ignore it.\n"
+            "---------------------------------------------------\n\n"
+        )
 
-    User message: {user_input}"""
+    user_payload = f"""{rag_section}Instructions:
+- Address the user's message while strictly executing your CURRENT GOAL.
+- Avoid repeating yourself, and do not repeat facts, phrases, or sentence structures you have already used.
+- Speak naturally from your character's persona and time period. If something is beyond your realistic knowledge, express natural ignorance or deflect in character.
+
+User message: {user_input}"""
 
     api_messages.append({"role": "user", "content": user_payload})
 
     response_stream = api_request(api_messages, stream=True)
 
     active_step_id = active_node_config.get("id") if active_node_config else active_node_id
+    active_step_name = (active_node_config.get("displayName") or active_node_config.get("label") or active_step_id) if active_node_config else active_step_id
 
     if next_node_id:
         session_instance.current_node_id = next_node_id
@@ -277,6 +298,7 @@ def run_dialogue_pipeline(
     return {
         "next_node_id": next_node_id,
         "active_step": active_step_id,
+        "active_step_name": active_step_name,
         "possible_next_nodes": possible_next_nodes,
         "response_stream": response_stream,
         "retrieved_chunks": retrieved_chunks,
