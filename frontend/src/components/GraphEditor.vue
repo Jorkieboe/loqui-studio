@@ -270,7 +270,15 @@ onNodeDragStop(({ node }) => {
 })
 
 function addNode(type, position = null) {
-  emit('addNode', { type, position })
+  let resolvedPosition = position
+  if (!resolvedPosition && graphWrapperEl.value) {
+    const rect = graphWrapperEl.value.getBoundingClientRect()
+    resolvedPosition = screenToFlowCoordinate({
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    })
+  }
+  emit('addNode', { type, position: resolvedPosition })
   closeMenus()
 }
 
@@ -320,7 +328,6 @@ onMounted(() => setTimeout(() => fitView(), 100))
         <div class="node node-flow node-cycle" :class="{ selected: selectedId === id, active: props.activeNodeId === id }">
           <Handle type="target" position="top" class="handle" />
           <div class="flow-label">{{ data.label }}</div>
-          <Handle type="source" position="bottom" class="handle" />
         </div>
       </template>
 
@@ -331,19 +338,18 @@ onMounted(() => setTimeout(() => fitView(), 100))
           <div class="bridge-header">
             <span class="bridge-name">{{ data.label }}</span>
           </div>
-          <Handle type="source" position="bottom" class="handle" />
         </div>
       </template>
 
       <!-- REACTIVE -->
       <template #node-reactive-node="{ id, data }">
         <div class="node node-content node-reactive" :class="{ selected: selectedId === id, active: props.activeNodeId === id }">
-          <Handle type="target" position="top" class="handle" />
+          
           <div class="content-header reactive-header">
             <span class="reactive-title">{{ data.label }}</span>
           </div>
           <div v-if="data.mode === 'standalone' && data.goal" class="content-goal">{{ data.goal }}</div>
-          <Handle type="source" position="bottom" class="handle" />
+          <Handle type="source" position="bottom" class="handle" v-if="data.mode != 'standalone'" />
         </div>
       </template>
 
