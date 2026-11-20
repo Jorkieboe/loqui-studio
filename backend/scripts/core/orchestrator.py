@@ -214,19 +214,21 @@ def run_dialogue_pipeline(
     rag_settings = info.get("rag", {})
     rag_scheme = rag_settings.get("ragScheme")
     ext_info = active_node_config.get("ext_info", "disabled") if active_node_config else "disabled"
+    executed_node_id = active_node_config.get("id") if active_node_config else active_node_id
+    search_query = ""
 
     is_bridge = active_node_config.get("type") == "bridge-node" if active_node_config else False
     if is_bridge and (not ext_info or ext_info == "disabled"):
         ext_info = "reuse"
 
-    PipelineLogger.llm_status(f"Pipeline Active Node: {active_node_id}, ext_info: {ext_info}, rag_scheme: {rag_scheme}")
+    PipelineLogger.llm_status(f"Pipeline Active Node: {executed_node_id}, ext_info: {ext_info}, rag_scheme: {rag_scheme}")
 
     if rag_scheme and ext_info in ["reuse", "resume", "resum"]:
         retrieved_chunks = getattr(session_instance, "last_retrieved_chunks", []) or []
         if retrieved_chunks:
-            PipelineLogger.rag(f"Reusing {len(retrieved_chunks)} cached RAG chunks for node '{active_node_id}'")
+            PipelineLogger.rag(f"Reusing {len(retrieved_chunks)} cached RAG chunks for node '{executed_node_id}'")
         else:
-            PipelineLogger.rag(f"No cached chunks to reuse for node '{active_node_id}'. Fetching fresh chunks...")
+            PipelineLogger.rag(f"No cached chunks to reuse for node '{executed_node_id}'. Fetching fresh chunks...")
             ext_info = "fetch"
 
     if rag_scheme and ext_info == "fetch":
@@ -287,7 +289,17 @@ def run_dialogue_pipeline(
             "- Your CURRENT GOAL is strictly leading. Do NOT replace, skip, or derail your goal to recite these facts.\n"
             "- Use these reference facts ONLY as supporting background to enrich your answer while fulfilling your goal.\n"
             "- If any reference detail is not directly relevant to your current goal and character perspective, ignore it.\n"
+            "- STRICT FACTUAL GROUNDING: For real-world or historical facts (specific places, venues, names, dates, or events), rely ONLY on the Reference Knowledge above, your character instructions, and the conversation history. Do NOT pull unprovided facts or extra details from your internal training memory.\n"
             "---------------------------------------------------\n\n"
+        )
+    elif rag_scheme:
+        rag_section = (
+            "--- BACKGROUND REFERENCE KNOWLEDGE ---\n"
+            "(No reference chunks were retrieved or active for this turn.)\n"
+            "STRICT FACTUAL GROUNDING:\n"
+            "- Do NOT pull real-world facts, specific venues, names, dates, or historical details from your internal training memory.\n"
+            "- Rely ONLY on your character instructions and the conversation history. If specific facts are requested that you do not have, stay in character and keep it general or admit you do not know.\n"
+            "--------------------------------------\n\n"
         )
 
     user_payload = f"""{rag_section}Instructions:
@@ -299,6 +311,7 @@ def run_dialogue_pipeline(
 
 User message: {user_input}"""
 
+    PipelineLogger.llm_status("User payload sent to LLM", user_payload)
     api_messages.append({"role": "user", "content": user_payload})
 
     response_stream = api_request(api_messages, stream=True)
@@ -321,5 +334,10 @@ User message: {user_input}"""
         "active_flow_id": session_instance.active_flow_id,
         "open_topics": session_instance.open_topics,
         "intent": intent,
-        "dynamic_tools": dynamic_tools
+        "dynamic_tools": dynamic_tools,
+        "rag_scheme": rag_scheme,
+        "rag_ext_info": ext_info,
+        "rag_search_query": search_query,
+        "system_prompt": system_prompt,
+        "user_payload": user_payload
     }

@@ -8,6 +8,7 @@
     "backend/assets/rag_schemes/example/db_metadata.json",
     "backend/scripts/core/intent_dispatcher.py",
     "backend/scripts/core/validation.py",
+    "backend/scripts/test_intent_jev.py",
     "backend/scripts/test_rag.py",
     "backend/scripts/tests/test_phase1_schemas.py",
     "backend/scripts/tests/test_phase2_dispatcher.py",

@@ -120,3 +120,97 @@ I am mostly using an e5 model which for Rag to work we need to use 'query:' as p
 
 ---
 
+## [2026-11-19 13:29:56] • Instruct Input
+
+THis is my last conversation. It works but the still feels like a chatbot and not the brabander henk. It should not always end with a question. what could we tweak
+[user]
+hi
+
+[assistant {Welcome}]
+Hey, hallo! Leuk dat je er bent. Heb je al een beetje rondgekeken in Breda? Het is hier echt gezellig!
+
+[user]
+Ik wil ergens ff lunchen
+
+[assistant {wat te eten}]
+Zeker weten! Wat voor soort lunch zoek je? Heb je zin in iets gezelligs met een biertje erbij of juist wat verfijnder?
+
+[user]
+Ik wil ff een snelle hap ergens
+
+[assistant {hart lover}]
+Ga eens naar DOK19, een gezellig café aan de haven. Ze hebben een lekkere lunchkaart met sandwiches en burgers, perfect voor een snelle hap. En je kunt er ook goed zitten met een biertje als je daar zin in hebt! Lekker, toch?
+
+[user]
+Biertje is voor later in de middag
+
+[assistant {Bridge}]
+Ah, dat is een goeie keuze! Dan kun je lekker lunchen en later nog genieten van een biertje. DOK19 is ideaal voor een snelle hap, dus daar zit je goed. Heb je verder nog plannen voor vandaag in Breda?
+
+[user]
+IK wil ook ff iets actiefs doen
+
+[assistant {Welcome}]
+Ah, dat klinkt goed! Je zou een fijne fietstocht kunnen maken door het Mastbos. Prachtige natuur en een beetje beweging, altijd fijn! Heb je je fiets bij je, of wil je er eentje huren?
+
+---
+
+## [2026-11-19 18:24:35] • Instruct Input
+
+I want to move the architecure to work with gpt-6 luna most of the settings doe not work anymore and reasoning should be none
+
+---
+
+## [2026-11-19 21:32:07] • Instruct Input
+
+I to be able to include gpt-6 luna but that has not as much parameters to control. I want o support al. So what i want is that all options visible in   "llm_presets": {
+    "default": {
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "max_tokens": 150,
+      "presence_penalty": 0.0,
+      "frequency_penalty": 0.0,
+      "stop": null
+    }
+  },
+
+But in this code lets check if that is added and then only include it
+So for gpt 6 luna max_tokens, presence_penalty are empty so they are skippen when setting up the request
+
+---
+
+## [2026-11-19 21:52:28] • Instruct Input
+
+I have some issue with disconnecting nodes from each other. they get stuck for some reason
+
+---
+
+## [2026-11-20 11:40:33] • Instruct Input
+
+I want to replace the tool calling of intent with jev. It is faster, cheaper and i only need it to select a one of nodes to go to. 
+this is the template:
+{
+  "new_choice_1": {
+    "type": "choice",
+    "instructions": "Which option best fits the state?",
+    "criteria": {
+      "option_a": "Description of an option",
+      "option_b": "Another description of a distinct option",
+      "option_c": "Another mutually exclusive option"
+    }
+  }
+Instruction can be the same
+Option can be replaced with the node name and this description of that intent behind it.
+
+use the env JEV_API_KEY as the key.
+
+Also write a test script to test the decision making
+
+---
+
+## [2026-11-20 13:56:44] • Instruct Input
+
+I feel like something is off. I think the rag chunks that are visible in the debug menu are not the same as it uses. I see often that it gives information that is not visible in the chunks. but i am not sure if he knows that from the internal memory
+
+---
+

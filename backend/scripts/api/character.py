@@ -390,7 +390,12 @@ async def test_draft(payload: dict):
             "active_flow_id": pipeline_result.get("active_flow_id", "main"),
             "open_topics": pipeline_result.get("open_topics", []),
             "intent": pipeline_result.get("intent", "resume_current_flow"),
-            "dynamic_tools": pipeline_result.get("dynamic_tools", [])
+            "dynamic_tools": pipeline_result.get("dynamic_tools", []),
+            "rag_scheme": pipeline_result.get("rag_scheme"),
+            "rag_ext_info": pipeline_result.get("rag_ext_info", "disabled"),
+            "rag_search_query": pipeline_result.get("rag_search_query", ""),
+            "system_prompt": pipeline_result.get("system_prompt", ""),
+            "user_payload": pipeline_result.get("user_payload", "")
         }
 
         return {

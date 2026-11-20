@@ -154,5 +154,17 @@
   },
   {
     "path": "backend/scripts/tests/test_phase5_e2e_bnb.py"
+  },
+  {
+    "path": "backend/assets/characters/henk_de_bredanaar/info.json"
+  },
+  {
+    "path": "backend/assets/characters/henk_de_bredanaar/layout.json"
+  },
+  {
+    "path": "backend/assets/characters/henk_de_bredanaar/prompts.yaml"
+  },
+  {
+    "path": "backend/scripts/test_intent_jev.py"
   }
 ]

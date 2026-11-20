@@ -12,10 +12,15 @@ const input   = ref('')
 const loading = ref(false)
 const chatEl  = ref(null)
 const expandedIndex = ref(null)
+const expandedPromptIndex = ref(null)
 const copied = ref(false)
 
 function toggleDebug(index) {
   expandedIndex.value = expandedIndex.value === index ? null : index
+}
+
+function togglePrompt(index) {
+  expandedPromptIndex.value = expandedPromptIndex.value === index ? null : index
 }
 
 function getNodeName(nodeId) {
@@ -104,6 +109,11 @@ async function send() {
         open_topics: data.open_topics || [],
         intent: data.intent || 'resume_current_flow',
         dynamic_tools: data.dynamic_tools || [],
+        rag_scheme: data.rag_scheme || null,
+        rag_ext_info: data.rag_ext_info || 'disabled',
+        rag_search_query: data.rag_search_query || '',
+        system_prompt: data.system_prompt || '',
+        user_payload: data.user_payload || '',
       }
 
       messages.value = [
@@ -221,6 +231,15 @@ function onKeydown(e) {
             <span class="debug-key">POV:</span>
             <span class="debug-val">{{ msg.debug.pov === null ? 'None' : msg.debug.pov }}</span>
           </div>
+          <div class="debug-row">
+            <span class="debug-key">RAG Mode:</span>
+            <span class="debug-val rag-mode-tag">{{ msg.debug.rag_ext_info || 'disabled' }}</span>
+            <span v-if="msg.debug.rag_scheme" class="debug-id-badge">{{ msg.debug.rag_scheme }}</span>
+          </div>
+          <div v-if="msg.debug.rag_search_query" class="debug-row debug-row-wrap">
+            <span class="debug-key">Search Query:</span>
+            <span class="debug-val debug-query-text">{{ msg.debug.rag_search_query }}</span>
+          </div>
 
           <div class="debug-sub-header">
             <span>Open Topics ({{ msg.debug.open_topics ? msg.debug.open_topics.length : 0 }}):</span>
@@ -260,6 +279,22 @@ function onKeydown(e) {
             <div v-for="(chunk, cIdx) in msg.debug.chunks" :key="cIdx" class="debug-chunk-box">
               <div class="chunk-id-tag">ID: {{ chunk.id || 'N/A' }}</div>
               <div class="chunk-body-text">{{ chunk.text }}</div>
+            </div>
+          </div>
+
+          <div v-if="msg.debug.system_prompt || msg.debug.user_payload" class="debug-prompt-section">
+            <button class="prompt-toggle-btn" @click.stop="togglePrompt(i)">
+              {{ expandedPromptIndex === i ? '▲ Hide exact LLM prompt' : '▼ Show exact LLM prompt' }}
+            </button>
+            <div v-if="expandedPromptIndex === i" class="debug-prompt-box">
+              <div v-if="msg.debug.system_prompt" class="prompt-part">
+                <div class="prompt-part-label">System Prompt</div>
+                <pre class="prompt-pre">{{ msg.debug.system_prompt }}</pre>
+              </div>
+              <div v-if="msg.debug.user_payload" class="prompt-part">
+                <div class="prompt-part-label">User Payload (with injected RAG)</div>
+                <pre class="prompt-pre">{{ msg.debug.user_payload }}</pre>
+              </div>
             </div>
           </div>
         </div>
@@ -508,6 +543,76 @@ function onKeydown(e) {
   padding: 0.05rem 0.35rem;
   border-radius: 4px;
   font-family: monospace;
+}
+
+.rag-mode-tag {
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.debug-row-wrap {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.debug-query-text {
+  font-style: italic;
+  word-break: break-word;
+}
+
+.debug-prompt-section {
+  margin-top: 0.5rem;
+  border-top: 1px dashed var(--border);
+  padding-top: 0.4rem;
+}
+
+.prompt-toggle-btn {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  width: 100%;
+  text-align: left;
+}
+
+.prompt-toggle-btn:hover {
+  background: #e2e8f0;
+}
+
+.debug-prompt-box {
+  margin-top: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.prompt-part-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.15rem;
+}
+
+.prompt-pre {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 0.45rem;
+  font-family: monospace;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 0;
 }
 
 .debug-sub-header {
