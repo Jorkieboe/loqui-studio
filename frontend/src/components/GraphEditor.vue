@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { VueFlow, useVueFlow, Handle } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/core/dist/style.css'
@@ -16,17 +16,83 @@ const emit = defineEmits([
   'removeNodes', 'updatePositions',
 ])
 
-const { onNodeClick, onEdgeContextMenu, onEdgeUpdateStart, onEdgeUpdate, onEdgeUpdateEnd, fitView, onNodesChange, onEdgesChange, onConnect, onNodeDragStop } = useVueFlow()
+const {
+  onNodeClick,
+  onPaneClick,
+  onPaneContextMenu,
+  onEdgeContextMenu,
+  onEdgeUpdateStart,
+  onEdgeUpdate,
+  onEdgeUpdateEnd,
+  onMoveStart,
+  fitView,
+  onNodesChange,
+  onEdgesChange,
+  onConnect,
+  onNodeDragStop,
+  screenToFlowCoordinate,
+} = useVueFlow()
 
-const nodes        = ref([])
-const edges        = ref([])
-const edgeCache    = new Map()
-const selectedId   = ref(null)
-const showAddMenu  = ref(false)
+const nodes          = ref([])
+const edges          = ref([])
+const edgeCache      = new Map()
+const selectedId     = ref(null)
+const showAddMenu    = ref(false)
+const graphWrapperEl = ref(null)
+const contextMenuEl  = ref(null)
+const contextMenu    = ref({
+  visible: false,
+  screenX: 0,
+  screenY: 0,
+  flowPosition: null,
+})
 let edgeUpdateSuccessful = false
 
 const hasDeflect = computed(() => props.varPrompt.some(n => n.type === 'deflect'))
 const hasSilence = computed(() => props.varPrompt.some(n => n.type === 'silence'))
+
+const menuGroups = computed(() => [
+  {
+    label: 'Content',
+    items: [
+      { type: 'basic', label: 'Prompt (basic)' },
+      { type: 'advanced', label: 'Prompt (advanced)' },
+      {
+        type: 'deflect',
+        label: `Deflect${hasDeflect.value ? ' (exists)' : ''}`,
+        disabled: hasDeflect.value,
+        title: hasDeflect.value ? 'Only one deflect allowed' : '',
+      },
+      {
+        type: 'silence',
+        label: `Silence${hasSilence.value ? ' (exists)' : ''}`,
+        disabled: hasSilence.value,
+        title: hasSilence.value ? 'Only one silence allowed' : '',
+      },
+    ],
+  },
+  {
+    label: 'Flow',
+    items: [
+      { type: 'end-node', label: 'End' },
+      { type: 'bridge-node', label: 'Bridge' },
+      { type: 'loop-node', label: 'Loop' },
+      { type: 'cycle-node', label: 'Cycle' },
+    ],
+  },
+  {
+    label: 'Reactive',
+    items: [
+      { type: 'reactive-flow', label: 'Reactive (Flow)' },
+      { type: 'reactive-standalone', label: 'Reactive (Standalone)' },
+    ],
+  },
+])
+
+function closeMenus() {
+  showAddMenu.value = false
+  contextMenu.value.visible = false
+}
 
 const FLOW_TYPES = new Set(['start-node', 'end-node', 'loop-node', 'cycle-node', 'bridge-node'])
 
@@ -82,8 +148,41 @@ function buildGraph() {
 }
 
 onNodeClick(({ node }) => {
+  closeMenus()
   selectedId.value = node.id
   emit('nodeSelected', node.id)
+})
+
+onPaneClick(() => {
+  closeMenus()
+})
+
+onMoveStart(() => {
+  closeMenus()
+})
+
+onPaneContextMenu(async (event) => {
+  event.preventDefault()
+  showAddMenu.value = false
+  const rect = graphWrapperEl.value?.getBoundingClientRect()
+  const rawX = rect ? event.clientX - rect.left : event.clientX
+  const rawY = rect ? event.clientY - rect.top : event.clientY
+  const flowPosition = screenToFlowCoordinate({ x: event.clientX, y: event.clientY })
+
+  contextMenu.value = {
+    visible: true,
+    screenX: rawX,
+    screenY: rawY,
+    flowPosition,
+  }
+
+  await nextTick()
+  if (rect && contextMenuEl.value) {
+    const menuW = contextMenuEl.value.offsetWidth
+    const menuH = contextMenuEl.value.offsetHeight
+    contextMenu.value.screenX = Math.max(8, Math.min(rawX, rect.width - menuW - 8))
+    contextMenu.value.screenY = Math.max(8, Math.min(rawY, rect.height - menuH - 8))
+  }
 })
 
 onConnect((connection) => {
@@ -96,6 +195,7 @@ onConnect((connection) => {
 
 onEdgeContextMenu(({ event, edge }) => {
   event.preventDefault()
+  closeMenus()
   if (edge) {
     emit('disconnectEdges', [{
       source: edge.source,
@@ -169,9 +269,14 @@ onNodeDragStop(({ node }) => {
   emit('updatePositions', [{ id: node.id, position: node.position }])
 })
 
-function addNode(type) {
-  emit('addNode', type)
-  showAddMenu.value = false
+function addNode(type, position = null) {
+  emit('addNode', { type, position })
+  closeMenus()
+}
+
+function toggleAddMenu() {
+  contextMenu.value.visible = false
+  showAddMenu.value = !showAddMenu.value
 }
 
 watch(() => props.varPrompt, buildGraph, { deep: true, immediate: true })
@@ -179,7 +284,7 @@ onMounted(() => setTimeout(() => fitView(), 100))
 </script>
 
 <template>
-  <div class="graph-wrapper">
+  <div ref="graphWrapperEl" class="graph-wrapper" @contextmenu.prevent>
     <VueFlow
       v-model:nodes="nodes"
       v-model:edges="edges"
@@ -288,30 +393,48 @@ onMounted(() => setTimeout(() => fitView(), 100))
 
     <!-- Add node -->
     <div class="add-area">
-      <button class="add-btn" @click.stop="showAddMenu = !showAddMenu">+ Add node</button>
+      <button class="add-btn" @click.stop="toggleAddMenu">+ Add node</button>
       <div v-if="showAddMenu" class="add-menu">
-        <p class="menu-label">Content</p>
-        <button @click="addNode('basic')">Prompt (basic)</button>
-        <button @click="addNode('advanced')">Prompt (advanced)</button>
-        <button @click="addNode('deflect')" :disabled="hasDeflect" :title="hasDeflect ? 'Only one deflect allowed' : ''">
-          Deflect{{ hasDeflect ? ' (exists)' : '' }}
-        </button>
-        <button @click="addNode('silence')" :disabled="hasSilence" :title="hasSilence ? 'Only one silence allowed' : ''">
-          Silence{{ hasSilence ? ' (exists)' : '' }}
-        </button>
-        <hr class="menu-divider" />
-        <p class="menu-label">Flow</p>
-        <button @click="addNode('end-node')">End</button>
-        <button @click="addNode('bridge-node')">Bridge</button>
-        <button @click="addNode('loop-node')">Loop</button>
-        <button @click="addNode('cycle-node')">Cycle</button>
-        <hr class="menu-divider" />
-        <p class="menu-label">Reactive</p>
-        <button @click="addNode('reactive-flow')">Reactive (Flow)</button>
-        <button @click="addNode('reactive-standalone')">Reactive (Standalone)</button>
+        <template v-for="(group, gIdx) in menuGroups" :key="group.label">
+          <hr v-if="gIdx > 0" class="menu-divider" />
+          <p class="menu-label">{{ group.label }}</p>
+          <button
+            v-for="item in group.items"
+            :key="item.type"
+            :disabled="item.disabled"
+            :title="item.title || ''"
+            @click="addNode(item.type)"
+          >
+            {{ item.label }}
+          </button>
+        </template>
       </div>
     </div>
-    <div v-if="showAddMenu" class="menu-backdrop" @click="showAddMenu = false" />
+
+    <!-- Right-click context menu -->
+    <div
+      v-if="contextMenu.visible"
+      ref="contextMenuEl"
+      class="add-menu context-menu"
+      :style="{ left: `${contextMenu.screenX}px`, top: `${contextMenu.screenY}px` }"
+      @click.stop
+    >
+      <template v-for="(group, gIdx) in menuGroups" :key="group.label">
+        <hr v-if="gIdx > 0" class="menu-divider" />
+        <p class="menu-label">{{ group.label }}</p>
+        <button
+          v-for="item in group.items"
+          :key="item.type"
+          :disabled="item.disabled"
+          :title="item.title || ''"
+          @click="addNode(item.type, contextMenu.flowPosition)"
+        >
+          {{ item.label }}
+        </button>
+      </template>
+    </div>
+
+    <div v-if="showAddMenu || contextMenu.visible" class="menu-backdrop" @click="closeMenus" @contextmenu.prevent="closeMenus" />
   </div>
 </template>
 
@@ -497,6 +620,10 @@ onMounted(() => setTimeout(() => fitView(), 100))
   padding: 0.3rem 0;
   min-width: 160px;
   z-index: 11;
+}
+.context-menu {
+  bottom: auto;
+  z-index: 12;
 }
 .menu-label {
   font-size: 0.68rem; font-weight: 700;

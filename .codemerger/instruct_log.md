@@ -262,3 +262,13 @@ Okay this is weird there is a socket event called chat_message and audio_message
 
 ---
 
+## [2026-11-20 16:16:51] • Instruct Input
+
+I want to add a context menu. to the graph.
+
+lets block the default action of right click.
+The menu shows a list with all nodes the same menu as + add node button under.
+When click save the mouse position of the click. At that location the node will be placed.
+
+---
+

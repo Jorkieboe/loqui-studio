@@ -255,12 +255,17 @@ function onUpdatePositions(updates) {
   }
 }
 
-function onAddNode(type) {
+function onAddNode(payload) {
+  const type = typeof payload === 'string' ? payload : payload?.type
+  const customPosition = typeof payload === 'object' ? payload?.position : null
   const defaults = NODE_DEFAULTS[type]
   if (!defaults) return
 
   const timestamp = Date.now()
   const count = prompts.value.var_prompt?.length || 0
+  const basePosition = customPosition
+    ? { x: customPosition.x, y: customPosition.y }
+    : { x: 250, y: count * 160 }
 
   if (type === 'reactive-flow') {
     const reactiveId = `reactive_${timestamp}`
@@ -293,7 +298,7 @@ function onAddNode(type) {
         label: reactiveId,
         node_class: 'reactive',
         type: 'reactive-node',
-        position: { x: 250, y: count * 160 },
+        position: { x: basePosition.x, y: basePosition.y },
         data: {},
       },
       {
@@ -301,7 +306,7 @@ function onAddNode(type) {
         label: bridgeId,
         node_class: 'flow',
         type: 'bridge-node',
-        position: { x: 250, y: (count + 1) * 160 },
+        position: { x: basePosition.x, y: basePosition.y + 160 },
         data: {},
       },
     ]
@@ -328,7 +333,7 @@ function onAddNode(type) {
     id, label: id,
     node_class: defaults.node_class,
     type,
-    position: { x: 250, y: count * 160 },
+    position: basePosition,
     data: {},
   }]
   selectedNodeId.value = id
