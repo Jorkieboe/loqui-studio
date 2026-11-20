@@ -112,7 +112,6 @@ def api_request(
                                             yield delta
                                     except Exception as parse_err:
                                         PipelineLogger.error("Ollama Parse Error", parse_err)
-                        PipelineLogger.llm_output(full_content)
                         PipelineLogger.llm_output("", is_end=True)
                         PipelineLogger.llm_status(f"Ollama Stream completed. Total chunks: {chunk_count}")
                     finally:
@@ -123,7 +122,6 @@ def api_request(
                     res_data = json.loads(response.read().decode("utf-8"))
                     content = res_data.get("message", {}).get("content", "")
                     PipelineLogger.llm_status(f"Ollama Non-stream response received. Length: {len(content) if content else 0}")
-                    PipelineLogger.llm_output(content)
                     PipelineLogger.llm_output("", is_end=True)
                     return content
         except Exception as e:

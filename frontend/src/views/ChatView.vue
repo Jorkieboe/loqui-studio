@@ -22,6 +22,8 @@ const textareaEl = ref(null)
 let socket = null
 let mediaRecorder = null
 let audioChunks = []
+let currentAudio = null
+let currentAudioUrl = null
 
 const currentNodeId = ref('start')
 const possibleNextNodes = ref([])
@@ -50,12 +52,54 @@ async function startNewChat(char) {
   router.push(`/chat/${session.id}`)
 }
 
+function stopAudioPlayback() {
+  if (currentAudio) {
+    currentAudio.pause()
+    currentAudio.src = ''
+    currentAudio = null
+  }
+  if (currentAudioUrl) {
+    URL.revokeObjectURL(currentAudioUrl)
+    currentAudioUrl = null
+  }
+}
+
+async function playAudioResponse(data) {
+  if (!data?.audio) return
+  stopAudioPlayback()
+  try {
+    const mimeType = data.mime_type || 'audio/wav'
+    const blob = data.audio instanceof Blob
+      ? data.audio
+      : new Blob([data.audio], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    currentAudioUrl = url
+    const audio = new Audio(url)
+    currentAudio = audio
+    audio.onended = () => {
+      if (currentAudio === audio) stopAudioPlayback()
+    }
+    audio.onerror = (err) => {
+      console.error('Audio playback error:', err)
+      if (currentAudio === audio) stopAudioPlayback()
+    }
+    await audio.play()
+  } catch (err) {
+    console.error('Failed to play audio response:', err)
+    stopAudioPlayback()
+  }
+}
+
 function connectSocket() {
   if (socket) socket.disconnect()
   socket = io({ transports: ['websocket', 'polling'] })
 
   socket.on('response_chunk', (data) => {
     if (data?.text) streamingText.value += data.text
+  })
+
+  socket.on('audio_response', (data) => {
+    playAudioResponse(data)
   })
 
   socket.on('response_complete', (data) => {
@@ -111,6 +155,7 @@ function sendText() {
 
 async function startRecording() {
   if (isRecording.value || !navigator.mediaDevices) return
+  stopAudioPlayback()
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     audioChunks = []
@@ -183,6 +228,7 @@ function formatTime(ts) {
 }
 
 watch(() => route.params.id, async (id) => {
+  stopAudioPlayback()
   messages.value = []
   streamingText.value = ''
   sessionEnded.value = false
@@ -197,6 +243,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  stopAudioPlayback()
   if (socket) socket.disconnect()
   if (mediaRecorder && isRecording.value) stopRecording()
 })

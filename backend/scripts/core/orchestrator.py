@@ -311,7 +311,6 @@ def run_dialogue_pipeline(
 
 User message: {user_input}"""
 
-    PipelineLogger.llm_status("User payload sent to LLM", user_payload)
     api_messages.append({"role": "user", "content": user_payload})
 
     response_stream = api_request(api_messages, stream=True)

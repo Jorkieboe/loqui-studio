@@ -214,3 +214,51 @@ I feel like something is off. I think the rag chunks that are visible in the deb
 
 ---
 
+## [2026-11-20 14:10:34] • Instruct Input
+
+Here you see the script from the docs from supertonic tts. I want to use instead of the old system. i cannot find any streaming support of this model, but it apparently really fast that it is not needed. so when streaming is done send it to the browser and then play it
+
+from supertonic import TTS
+
+# First run downloads the model from Hugging Face automatically.
+tts = TTS(auto_download=True)
+
+style = tts.get_voice_style(voice_name="M1")
+
+text = "Supertonic is a lightning fast, on-device TTS system."
+
+wav, duration = tts.synthesize(
+    text=text,
+    lang="en",                      # Language code (e.g., "en", "ko", "na" for language-agnostic)
+    voice_style=style,              # Voice style object
+    total_steps=8,                  # Quality: 5 (low) to 12 (high), default 8 (medium)
+    speed=1.05,                     # Speed: 0.7 (slow) to 2.0 (fast)
+)
+# wav: numpy array of shape (1, num_samples,) with dtype=np.float32, sampled at 44100 Hz
+# duration: numpy array of shape (1,) containing the duration of the generated audio in seconds
+
+tts.save_audio(wav, "output.wav")
+# import soundfile as sf
+# sf.write("output.wav", wav.squeeze(), 44100)
+
+
+print(f"Generated {duration[0]:.2f}s of audio")
+
+---
+
+## [2026-11-20 14:36:51] • Instruct Input
+
+[Traceback: RuntimeError: operator torchvision::nms does not exist]
+
+The above exception was the direct cause of the following exception:
+
+[Traceback: ModuleNotFoundError: Could not import module 'HiggsAudioV2TokenizerModel'. Are this object's requirements defined correctly?]
+
+---
+
+## [2026-11-20 15:34:06] • Instruct Input
+
+Okay this is weird there is a socket event called chat_message and audio_message. the are almost the same the difference is that audio message first transcribes it after that the function is the same. Lets put the next part together we do not repeat outselves
+
+---
+

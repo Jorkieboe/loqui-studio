@@ -53,6 +53,7 @@
     "backend/scripts/test_intent_jev.py",
     "backend/scripts/test_orchestration.py",
     "backend/scripts/test_rag.py",
+    "backend/scripts/test_tts.py",
     "backend/scripts/tests/test_phase1_schemas.py",
     "backend/scripts/tests/test_phase2_dispatcher.py",
     "backend/scripts/tests/test_phase4_validation.py",

@@ -443,6 +443,16 @@ onBeforeUnmount(() => {
                   <input v-model="info.name" type="text" />
                 </div>
                 <div class="field">
+                  <label>Language:</label>
+                  <input v-model="info.language" type="text" list="language-options" placeholder="e.g. en, nl" />
+                  <datalist id="language-options">
+                    <option value="en">English (en)</option>
+                    <option value="nl">Dutch (nl)</option>
+                    <option value="de">German (de)</option>
+                    <option value="fr">French (fr)</option>
+                  </datalist>
+                </div>
+                <div class="field">
                   <label>Description</label>
                   <textarea v-model="info.description" rows="4" />
                 </div>

@@ -30,6 +30,10 @@ def load_whisper_async():
                 model="openai/whisper-tiny",
                 device=device
             )
+            if getattr(_whisper_pipeline.model, "generation_config", None) is not None:
+                _whisper_pipeline.model.generation_config.forced_decoder_ids = None
+            if getattr(_whisper_pipeline, "tokenizer", None) is not None:
+                _whisper_pipeline.tokenizer.clean_up_tokenization_spaces = False
             PipelineLogger.info("Whisper pipeline loaded successfully.")
         except Exception as e:
             PipelineLogger.error(f"Failed to load Whisper pipeline: {e}. STT will fall back to simulation or API.")
@@ -73,7 +77,7 @@ def decode_audio_to_float32(audio_bytes: bytes) -> np.ndarray:
         PipelineLogger.error(f"Audio decoding failed: {e}")
         raise e
 
-def transcribe_audio(audio_bytes: bytes) -> str:
+def transcribe_audio(audio_bytes: bytes, language: str | None = None, task: str = "transcribe") -> str:
     pipeline_instance = get_whisper_pipeline()
     if pipeline_instance is None:
         PipelineLogger.info("Local Whisper not ready. Attempting API transcription or fallback.")
@@ -81,7 +85,14 @@ def transcribe_audio(audio_bytes: bytes) -> str:
 
     try:
         audio_data = decode_audio_to_float32(audio_bytes)
-        result = pipeline_instance({"raw": audio_data, "sampling_rate": 16000})
+        resolved_language = (language or "").strip()
+        generate_kwargs = {"task": task}
+        if resolved_language and resolved_language.lower() not in ("auto", "none", "null"):
+            generate_kwargs["language"] = resolved_language
+        result = pipeline_instance(
+            {"raw": audio_data, "sampling_rate": 16000},
+            generate_kwargs=generate_kwargs,
+        )
         transcription_text = result.get("text", "").strip()
         PipelineLogger.transcription(transcription_text)
         return transcription_text

@@ -33,7 +33,7 @@ REM Detect NVIDIA GPU driver presence
 where nvidia-smi >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
     echo [SETUP] Detected NVIDIA GPU
-    set TORCH_INDEX_URL=https://download.pytorch.org/whl/cu121
+    set TORCH_INDEX_URL=https://download.pytorch.org/whl/cu126
     set CUDA_VERSION_LABEL=cu126
 ) else (
     echo [SETUP] No NVIDIA GPU detected. Using CPU.
@@ -42,7 +42,7 @@ if %ERRORLEVEL% EQU 0 (
 )
 
 echo [SETUP] Installing PyTorch !CUDA_VERSION_LABEL! using uv...
-uv pip install torch torchvision torchaudio --index-url !TORCH_INDEX_URL!
+uv pip install torch torchaudio --index-url !TORCH_INDEX_URL!
 
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to install PyTorch.
