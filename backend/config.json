@@ -19,5 +19,14 @@
     "host": "http://127.0.0.1:11434",
     "llm_model": "batiai/gemma4-e2b:q4",
     "embedding_model": "qllama/multilingual-e5-base"
+  },
+  "jev": {
+    "api_url": "https://api.typesafe.ai/v1/systemone",
+    "model": "jev-latest",
+    "state_key": "state",
+    "schema_key": "questions",
+    "auth_header": "Authorization",
+    "auth_prefix": "Bearer ",
+    "timeout": 15
   }
 }
