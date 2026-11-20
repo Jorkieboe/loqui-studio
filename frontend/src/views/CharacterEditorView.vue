@@ -165,13 +165,16 @@ function onConnectEdge({ source, target, sourceHandle }) {
 
   if (node.type === 'loop-node') {
     const idx = sourceHandle === 'loop-body' ? 0 : 1
+    if (idx === 1 && !node.next[0]) node.next[0] = {}
     node.next[idx] = { target }
   } else {
-    if (!node.next.find(c => c.target === target))
+    if (!node.next.find(c => (typeof c === 'string' ? c : c?.target) === target))
       node.next.push({ target })
   }
   layout.value.connections = [
-    ...(layout.value.connections || []).filter(c => !(c.source === source && c.target === target)),
+    ...(layout.value.connections || []).filter(
+      c => !(c.source === source && c.target === target && (!sourceHandle || !c.sourceOutput || c.sourceOutput === sourceHandle))
+    ),
     {
       id: `conn_${source}__${target}`,
       source,
@@ -189,14 +192,27 @@ function onDisconnectEdges(connections) {
     const node = prompts.value.var_prompt?.find(n => n.id === source)
     if (node) {
       if (node.type === 'loop-node') {
-        const idx = sourceHandle === 'loop-body' ? 0 : 1
-        if (node.next?.[idx]?.target === target) node.next.splice(idx, 1)
+        node.next = node.next || []
+        if (sourceHandle === 'loop-body') {
+          if (node.next[0]?.target === target) node.next[0] = {}
+        } else if (sourceHandle === 'loop-exit') {
+          if (node.next[1]?.target === target) node.next[1] = {}
+        } else {
+          if (node.next[0]?.target === target) node.next[0] = {}
+          if (node.next[1]?.target === target) node.next[1] = {}
+        }
+        while (node.next.length && !node.next[node.next.length - 1]?.target) {
+          node.next.pop()
+        }
       } else {
-        node.next = (node.next || []).filter(c => c.target !== target)
+        node.next = (node.next || []).filter(c => {
+          const cTarget = typeof c === 'string' ? c : c?.target
+          return cTarget && cTarget !== target
+        })
       }
     }
     layout.value.connections = (layout.value.connections || []).filter(
-      c => !(c.source === source && c.target === target)
+      c => !(c.source === source && c.target === target && (!sourceHandle || !c.sourceOutput || c.sourceOutput === sourceHandle))
     )
   }
   resetChat()
@@ -206,8 +222,23 @@ function onRemoveNodes(ids) {
   const idSet = new Set(ids)
   prompts.value.var_prompt = (prompts.value.var_prompt || []).filter(n => !idSet.has(n.id))
   layout.value.nodes      = (layout.value.nodes || []).filter(n => !idSet.has(n.id) && !idSet.has(n.label))
-  for (const node of (prompts.value.var_prompt || []))
-    node.next = (node.next || []).filter(c => !idSet.has(c.target))
+  layout.value.connections = (layout.value.connections || []).filter(c => !idSet.has(c.source) && !idSet.has(c.target))
+  for (const node of (prompts.value.var_prompt || [])) {
+    if (node.type === 'loop-node') {
+      node.next = (node.next || []).map(c => {
+        const cTarget = typeof c === 'string' ? c : c?.target
+        return (!cTarget || idSet.has(cTarget)) ? {} : c
+      })
+      while (node.next.length && !node.next[node.next.length - 1]?.target) {
+        node.next.pop()
+      }
+    } else {
+      node.next = (node.next || []).filter(c => {
+        const cTarget = typeof c === 'string' ? c : c?.target
+        return cTarget && !idSet.has(cTarget)
+      })
+    }
+  }
   if (selectedNodeId.value && idSet.has(selectedNodeId.value))
     selectedNodeId.value = null
   resetChat()

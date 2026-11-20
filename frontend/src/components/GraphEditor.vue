@@ -16,13 +16,14 @@ const emit = defineEmits([
   'removeNodes', 'updatePositions',
 ])
 
-const { onNodeClick, onEdgeContextMenu, onEdgeUpdate, fitView, onNodesChange, onEdgesChange, onConnect, onNodeDragStop } = useVueFlow()
+const { onNodeClick, onEdgeContextMenu, onEdgeUpdateStart, onEdgeUpdate, onEdgeUpdateEnd, fitView, onNodesChange, onEdgesChange, onConnect, onNodeDragStop } = useVueFlow()
 
 const nodes        = ref([])
 const edges        = ref([])
 const edgeCache    = new Map()
 const selectedId   = ref(null)
 const showAddMenu  = ref(false)
+let edgeUpdateSuccessful = false
 
 const hasDeflect = computed(() => props.varPrompt.some(n => n.type === 'deflect'))
 const hasSilence = computed(() => props.varPrompt.some(n => n.type === 'silence'))
@@ -56,23 +57,24 @@ function buildGraph() {
     }
   })
 
+  edgeCache.clear()
   const allEdges = []
   for (const n of props.varPrompt) {
     const isLoop = n.type === 'loop-node'
     ;(n.next || []).forEach((conn, i) => {
-      if (!conn.target) return
-      const edgeId = `e_${n.id}__${conn.target}__${i}`
+      const target = typeof conn === 'string' ? conn : conn?.target
+      if (!target) return
+      const edgeId = `e_${n.id}__${target}__${i}`
       const edgeObj = {
         id:           edgeId,
         source:       n.id,
-        target:       conn.target,
+        target,
         sourceHandle: isLoop ? (i === 0 ? 'loop-body' : 'loop-exit') : null,
         updatable:    true,
         interactionWidth: 20,
         animated:     false,
-        style:        { stroke: '#1a1a1a', strokeWidth: 2 },
       }
-      edgeCache.set(edgeId, { source: n.id, target: conn.target, sourceHandle: edgeObj.sourceHandle })
+      edgeCache.set(edgeId, { source: n.id, target, sourceHandle: edgeObj.sourceHandle })
       allEdges.push(edgeObj)
     })
   }
@@ -103,7 +105,12 @@ onEdgeContextMenu(({ event, edge }) => {
   }
 })
 
+onEdgeUpdateStart(() => {
+  edgeUpdateSuccessful = false
+})
+
 onEdgeUpdate(({ edge, connection }) => {
+  edgeUpdateSuccessful = true
   emit('disconnectEdges', [{
     source: edge.source,
     target: edge.target,
@@ -114,6 +121,16 @@ onEdgeUpdate(({ edge, connection }) => {
     target: connection.target,
     sourceHandle: connection.sourceHandle || null,
   })
+})
+
+onEdgeUpdateEnd(({ edge }) => {
+  if (!edgeUpdateSuccessful && edge) {
+    emit('disconnectEdges', [{
+      source: edge.source,
+      target: edge.target,
+      sourceHandle: edge.sourceHandle || null,
+    }])
+  }
 })
 
 onEdgesChange((changes) => {
@@ -324,6 +341,8 @@ onMounted(() => setTimeout(() => fitView(), 100))
 
 :deep(.vue-flow__edge-path) {
   cursor: pointer;
+  stroke: #1a1a1a;
+  stroke-width: 2px;
 }
 :deep(.vue-flow__edge:hover .vue-flow__edge-path) {
   stroke: #3DCFAC;
