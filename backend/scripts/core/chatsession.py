@@ -3,16 +3,37 @@ from scripts.services.llm_service import api_request
 
 logger = logging.getLogger(__name__)
 
+FLOW_NODE_TYPES = ("start-node", "loop-node", "loop", "cycle-node", "cycle", "end-node", "end")
+
+def extract_target(item):
+    return item.get("target") if isinstance(item, dict) else item
+
+def find_node_by_id(var_prompt: list, node_id: str) -> dict | None:
+    if not node_id:
+        return None
+    return next((n for n in var_prompt if n.get("id") == node_id), None)
+
+def _normalize_next_list(node: dict) -> list:
+    next_list = node.get("next", [])
+    if isinstance(next_list, dict):
+        return [next_list]
+    if isinstance(next_list, list):
+        return next_list
+    return []
+
+def _is_flow_node(node: dict) -> bool:
+    return (
+        (node.get("node_class") == "flow" or
+        node.get("type") in FLOW_NODE_TYPES or
+        node.get("id") in ["start", "end"]) and
+        node.get("type") != "bridge-node"
+    )
+
 def get_automatic_transition(node: dict, var_prompt: list, loop_state: dict) -> str:
     node_type = node.get("type", "")
     node_id = node.get("id", "")
     node_class = node.get("node_class", "")
-
-    next_list = node.get("next", [])
-    if isinstance(next_list, dict):
-        next_list = [next_list]
-    elif not isinstance(next_list, list):
-        next_list = []
+    next_list = _normalize_next_list(node)
 
     is_loop = (node_type in ["loop-node", "loop"] or "loop" in node_id or "loop" in node_class)
     is_cycle = (node_type in ["cycle-node", "cycle"] or "cycle" in node_id or "cycle" in node_class)
@@ -23,37 +44,30 @@ def get_automatic_transition(node: dict, var_prompt: list, loop_state: dict) -> 
         loop_state["active_loop_id"] = node_id
         if node_id not in loop_state["counters"]:
             loop_state["counters"][node_id] = 0
-        if next_list:
-            item = next_list[0]
-            return item.get("target") if isinstance(item, dict) else item
-        return None
+        return extract_target(next_list[0]) if next_list else None
 
     if is_cycle:
         if loop_state is None:
             loop_state = {"counters": {}, "active_loop_id": None}
 
-        loop_id = loop_state.get("active_loop_id")
-        if not loop_id:
-            loop_id = node.get("loop_id") or node.get("target_loop") or node.get("loop")
-
+        loop_id = (
+            loop_state.get("active_loop_id")
+            or node.get("loop_id")
+            or node.get("target_loop")
+            or node.get("loop")
+        )
         if not loop_id:
             for next_item in next_list:
-                target = next_item.get("target") if isinstance(next_item, dict) else next_item
+                target = extract_target(next_item)
                 if target:
-                    target_node = next((n for n in var_prompt if n.get("id") == target), None)
+                    target_node = find_node_by_id(var_prompt, target)
                     if target_node and (target_node.get("type") in ["loop-node", "loop"] or "loop" in target_node.get("id", "")):
                         loop_id = target
                         break
 
-        loop_node = None
-        if loop_id:
-            loop_node = next((n for n in var_prompt if n.get("id") == loop_id), None)
-
+        loop_node = find_node_by_id(var_prompt, loop_id)
         if not loop_node:
-            if next_list:
-                item = next_list[0]
-                return item.get("target") if isinstance(item, dict) else item
-            return None
+            return extract_target(next_list[0]) if next_list else None
 
         loop_count = int(loop_node.get("loop_count", 2))
         if loop_id not in loop_state["counters"]:
@@ -62,43 +76,25 @@ def get_automatic_transition(node: dict, var_prompt: list, loop_state: dict) -> 
         loop_state["counters"][loop_id] += 1
 
         if loop_state["counters"][loop_id] < loop_count:
-            if next_list:
-                item = next_list[0]
-                return item.get("target") if isinstance(item, dict) else item
-            return loop_id
+            return extract_target(next_list[0]) if next_list else loop_id
         else:
             loop_state["counters"][loop_id] = 0
             loop_state["active_loop_id"] = None
-            loop_next_list = loop_node.get("next", [])
-            if isinstance(loop_next_list, dict):
-                loop_next_list = [loop_next_list]
-            elif not isinstance(loop_next_list, list):
-                loop_next_list = []
-
+            loop_next_list = _normalize_next_list(loop_node)
             if len(loop_next_list) >= 2:
-                item = loop_next_list[1]
-                return item.get("target") if isinstance(item, dict) else item
+                return extract_target(loop_next_list[1])
             return None
 
-    if next_list:
-        item = next_list[0]
-        return item.get("target") if isinstance(item, dict) else item
-
-    return None
+    return extract_target(next_list[0]) if next_list else None
 
 def evaluate_prompt_transition(node: dict, user_input: str, var_prompt: list, base_prompt: str, setting: str) -> str:
-    next_list = node.get("next", [])
-    if isinstance(next_list, dict):
-        next_list = [next_list]
-    elif not isinstance(next_list, list):
-        next_list = []
+    next_list = _normalize_next_list(node)
 
     if not next_list:
         return None
 
     if len(next_list) == 1:
-        item = next_list[0]
-        return item.get("target") if isinstance(item, dict) else item
+        return extract_target(next_list[0])
 
     choices = []
     for item in next_list:
@@ -154,9 +150,7 @@ def traverse_fsm(user_input: str, active_node_id: str, layout: dict, var_prompt:
     Traverses the FSM using prompt-based structures rather than purely visual nodes.
     Automatically advances through flow control nodes (start, loop, end).
     """
-    active_node = None
-    if active_node_id:
-        active_node = next((node for node in var_prompt if node.get("id") == active_node_id), None)
+    active_node = find_node_by_id(var_prompt, active_node_id)
 
     if not active_node:
         active_node = next((node for node in var_prompt if node.get("type") == "start-node" or node.get("id") == "start"), None)
@@ -167,14 +161,7 @@ def traverse_fsm(user_input: str, active_node_id: str, layout: dict, var_prompt:
         return None, {}, []
 
     # Determine transition from current active node (bridge-node generates dialogue, not auto-skipped)
-    is_flow_node = (
-        (active_node.get("node_class") == "flow" or
-        active_node.get("type") in ["start-node", "loop-node", "loop", "cycle-node", "cycle", "end-node", "end"] or
-        active_node.get("id") in ["start", "end"]) and
-        active_node.get("type") != "bridge-node"
-    )
-
-    if is_flow_node:
+    if _is_flow_node(active_node):
         next_node_id = get_automatic_transition(active_node, var_prompt, loop_state)
     else:
         next_node_id = evaluate_prompt_transition(active_node, user_input, var_prompt, base_prompt, setting)
@@ -183,23 +170,17 @@ def traverse_fsm(user_input: str, active_node_id: str, layout: dict, var_prompt:
     visited_nodes = set()
     while next_node_id and next_node_id not in visited_nodes:
         visited_nodes.add(next_node_id)
-        next_node = next((node for node in var_prompt if node.get("id") == next_node_id), None)
+        next_node = find_node_by_id(var_prompt, next_node_id)
         if not next_node:
             break
 
-        is_next_flow = (
-            (next_node.get("node_class") == "flow" or
-            next_node.get("type") in ["start-node", "loop-node", "loop", "cycle-node", "cycle", "end-node", "end"] or
-            next_node.get("id") in ["start", "end"]) and
-            next_node.get("type") != "bridge-node"
-        )
-        if is_next_flow:
+        if _is_flow_node(next_node):
             next_node_id = get_automatic_transition(next_node, var_prompt, loop_state)
         else:
             break
 
     # Resolve target active node configuration
-    next_node_config = next((node for node in var_prompt if node.get("id") == next_node_id), None)
+    next_node_config = find_node_by_id(var_prompt, next_node_id)
     if not next_node_config:
         if active_node and active_node.get("type") == "bridge-node":
             main_prompt = next((n for n in var_prompt if n.get("node_class") == "prompt" and n.get("type") != "bridge-node"), None)
@@ -212,12 +193,7 @@ def traverse_fsm(user_input: str, active_node_id: str, layout: dict, var_prompt:
 
     possible_next_nodes = []
     if next_node_config:
-        next_transitions = next_node_config.get("next", [])
-        if isinstance(next_transitions, dict):
-            next_transitions = [next_transitions]
-        elif not isinstance(next_transitions, list):
-            next_transitions = []
-        for item in next_transitions:
+        for item in _normalize_next_list(next_node_config):
             if isinstance(item, dict):
                 target = item.get("target")
                 if target:

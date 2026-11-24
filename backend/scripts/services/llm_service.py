@@ -5,26 +5,21 @@ from typing import Dict, Any, List
 from dotenv import load_dotenv
 import tiktoken
 from openai import OpenAI
+from scripts.utils.config import CONFIG_PATH, load_config
 from scripts.utils.logger import PipelineLogger
 
 load_dotenv()
 
-BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-CONFIG_PATH = os.path.join(BACKEND_DIR, "config.json")
-
 def _is_preset_value_set(value: Any) -> bool:
-    if value is None or value == "":
-        return False
-    if isinstance(value, (list, dict)) and len(value) == 0:
+    if value is None or value == "" or (isinstance(value, (list, dict)) and len(value) == 0):
         return False
     return True
 
 def load_preset_config(preset_name: str = "default") -> Dict[str, Any]:
     if os.path.exists(CONFIG_PATH):
         try:
-            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-                config = json.load(f)
-                return config.get("llm_presets", {}).get(preset_name, {})
+            config = load_config()
+            return config.get("llm_presets", {}).get(preset_name, {})
         except Exception as e:
             PipelineLogger.error("Failed to load llm_presets config", e)
     return {

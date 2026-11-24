@@ -5,32 +5,26 @@ import urllib.request
 import urllib.error
 from typing import List, Dict, Any
 import numpy as np
+from scripts.utils.config import CONFIG_PATH, load_config
 
 logger = logging.getLogger(__name__)
 
-BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-CONFIG_PATH = os.path.join(BACKEND_DIR, "config.json")
 OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+DEFAULT_OLLAMA_CONFIG = {
+    "enabled": True,
+    "host": OLLAMA_BASE_URL,
+    "llm_model": "llama3",
+    "embedding_model": "nomic-embed-text"
+}
 
 def load_ollama_config() -> Dict[str, Any]:
     if os.path.exists(CONFIG_PATH):
         try:
-            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-                config = json.load(f)
-                return config.get("ollama", {
-                    "enabled": True,
-                    "host": "http://127.0.0.1:11434",
-                    "llm_model": "llama3",
-                    "embedding_model": "nomic-embed-text"
-                })
+            config = load_config()
+            return config.get("ollama", dict(DEFAULT_OLLAMA_CONFIG))
         except Exception as e:
             logger.error(f"Failed to load ollama config: {e}")
-    return {
-        "enabled": True,
-        "host": "http://127.0.0.1:11434",
-        "llm_model": "llama3",
-        "embedding_model": "nomic-embed-text"
-    }
+    return dict(DEFAULT_OLLAMA_CONFIG)
 
 def is_ollama_available() -> bool:
     try:
@@ -62,7 +56,7 @@ def get_loaded_models() -> List[str]:
         logger.warning(f"[Ollama] Failed to query loaded models: {e}")
         return []
 
-def unload_model(model_name: str) -> bool:
+def _set_model_keep_alive(model_name: str, keep_alive: int, timeout: int, success_verb: str, fail_verb: str) -> bool:
     try:
         config = load_ollama_config()
         host = config.get("host", OLLAMA_BASE_URL)
@@ -70,7 +64,7 @@ def unload_model(model_name: str) -> bool:
         payload = {
             "model": model_name,
             "prompt": "",
-            "keep_alive": 0
+            "keep_alive": keep_alive
         }
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
@@ -79,38 +73,19 @@ def unload_model(model_name: str) -> bool:
             headers={"Content-Type": "application/json"},
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=5) as response:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
             response.read()
-            logger.info(f"[Ollama] Unloaded model: {model_name}")
+            logger.info(f"[Ollama] {success_verb} model: {model_name}")
             return True
     except Exception as e:
-        logger.warning(f"[Ollama] Failed to unload model {model_name}: {e}")
+        logger.warning(f"[Ollama] Failed to {fail_verb} model {model_name}: {e}")
         return False
 
+def unload_model(model_name: str) -> bool:
+    return _set_model_keep_alive(model_name, keep_alive=0, timeout=5, success_verb="Unloaded", fail_verb="unload")
+
 def load_model(model_name: str) -> bool:
-    try:
-        config = load_ollama_config()
-        host = config.get("host", OLLAMA_BASE_URL)
-        url = f"{host}/api/generate"
-        payload = {
-            "model": model_name,
-            "prompt": "",
-            "keep_alive": -1
-        }
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            url,
-            data=data,
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
-        with urllib.request.urlopen(req, timeout=60) as response:
-            response.read()
-            logger.info(f"[Ollama] Preloaded model: {model_name}")
-            return True
-    except Exception as e:
-        logger.warning(f"[Ollama] Failed to preload model {model_name}: {e}")
-        return False
+    return _set_model_keep_alive(model_name, keep_alive=-1, timeout=60, success_verb="Preloaded", fail_verb="preload")
 
 def manage_models(target_models: List[str] = None):
     config = load_ollama_config()

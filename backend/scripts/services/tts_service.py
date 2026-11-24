@@ -3,11 +3,9 @@ import os
 import threading
 import numpy as np
 import soundfile as sf
-from dotenv import load_dotenv
+from scripts.utils.config import CHARACTERS_DIR, load_project_env
 from scripts.utils.logger import PipelineLogger
 
-BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-CHARACTERS_DIR = os.path.join(BACKEND_DIR, "assets", "characters")
 REF_AUDIO_CANDIDATES = (
     "ref.wav",
     "ref.mp3",
@@ -18,9 +16,7 @@ REF_AUDIO_CANDIDATES = (
     "reference.mp3",
 )
 
-load_dotenv()
-load_dotenv(os.path.join(BACKEND_DIR, "..", ".env"))
-load_dotenv(os.path.join(BACKEND_DIR, ".env"))
+load_project_env()
 
 _tts_engine = None
 _tts_load_error = None
@@ -108,11 +104,8 @@ def resolve_character_ref_audio(
     ref_audio_name: str | None = None,
     ref_text_override: str | None = None,
 ) -> tuple[str | None, str | None]:
-    if not character_id:
-        return None, None
-
-    char_dir = os.path.join(CHARACTERS_DIR, character_id)
-    if not os.path.isdir(char_dir):
+    char_dir = os.path.join(CHARACTERS_DIR, character_id) if character_id else ""
+    if not character_id or not os.path.isdir(char_dir):
         return None, None
 
     audio_path = None
@@ -122,14 +115,12 @@ def resolve_character_ref_audio(
             audio_path = candidate
 
     if audio_path is None:
-        for filename in REF_AUDIO_CANDIDATES:
-            candidate = os.path.join(char_dir, filename)
-            if os.path.isfile(candidate):
-                audio_path = candidate
-                break
-
-    if audio_path is None:
-        return None, None
+        audio_path = next(
+            (os.path.join(char_dir, fn) for fn in REF_AUDIO_CANDIDATES if os.path.isfile(os.path.join(char_dir, fn))),
+            None
+        )
+        if audio_path is None:
+            return None, None
 
     resolved_ref_text = ref_text_override.strip() if isinstance(ref_text_override, str) and ref_text_override.strip() else None
     if resolved_ref_text is None:
@@ -159,10 +150,7 @@ def synthesize_tts_wav(
     ref_audio: str | None = None,
     ref_text: str | None = None,
 ) -> bytes:
-    if not is_tts_enabled():
-        return b""
-
-    if not text or not text.strip():
+    if not is_tts_enabled() or not text or not text.strip():
         return b""
 
     resolved_audio, resolved_text = resolve_character_ref_audio(

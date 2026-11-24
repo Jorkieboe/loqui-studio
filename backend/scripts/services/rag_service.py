@@ -1,18 +1,16 @@
 import os
 import json
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import numpy as np
 from rank_bm25 import BM25Okapi
+from scripts.utils.config import RAG_SCHEMES_DIR
+from scripts.utils.helpers import is_empty_pov, iter_history_turns
 from scripts.utils.logger import PipelineLogger
 from scripts.services.llm_service import api_request
 from scripts.services.ollama_service import is_ollama_available, load_ollama_config
 
 logger = logging.getLogger(__name__)
-
-BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-ASSETS_DIR = os.path.join(BACKEND_DIR, "assets")
-RAG_SCHEMES_DIR = os.path.join(ASSETS_DIR, "rag_schemes")
 
 # [MODIFIED] Retrieve combined English and Dutch stop words from spaCy
 try:
@@ -80,6 +78,15 @@ def init_rag_schemes():
 
 init_rag_schemes()
 
+def _extract_raw_chunks(data_loaded: Any) -> list:
+    if isinstance(data_loaded, list):
+        return data_loaded
+    if isinstance(data_loaded, dict):
+        if isinstance(data_loaded.get("chunks"), list):
+            return data_loaded["chunks"]
+        return list(data_loaded.values())
+    return []
+
 def get_available_rag_schemes() -> List[str]:
     if not os.path.exists(RAG_SCHEMES_DIR):
         return []
@@ -88,6 +95,119 @@ def get_available_rag_schemes() -> List[str]:
         if os.path.isdir(os.path.join(RAG_SCHEMES_DIR, d))
     ]
     return sorted(schemes)
+
+def get_scheme_metadata_catalog(scheme_id: str) -> Dict[str, Any]:
+    scheme_dir = os.path.join(RAG_SCHEMES_DIR, scheme_id) if scheme_id else ""
+    if not scheme_id or not os.path.isdir(scheme_dir):
+        return {"scheme_id": scheme_id, "fields": []}
+
+    field_values: Dict[str, set] = {}
+
+    struct_path = os.path.join(scheme_dir, "metadata_struct.json")
+    if os.path.isfile(struct_path):
+        try:
+            with open(struct_path, "r", encoding="utf-8") as f:
+                struct_data = json.load(f)
+            props = (
+                struct_data.get("json_schema", {}).get("schema", {}).get("properties")
+                or struct_data.get("properties")
+                or {}
+            )
+            if isinstance(props, dict):
+                for prop_key, prop_def in props.items():
+                    if prop_key not in field_values:
+                        field_values[prop_key] = set()
+                    if isinstance(prop_def, dict):
+                        for enum_val in prop_def.get("enum", []) or []:
+                            if enum_val is not None and str(enum_val).strip():
+                                field_values[prop_key].add(str(enum_val).strip())
+                        items_def = prop_def.get("items")
+                        if isinstance(items_def, dict):
+                            for enum_val in items_def.get("enum", []) or []:
+                                if enum_val is not None and str(enum_val).strip():
+                                    field_values[prop_key].add(str(enum_val).strip())
+        except Exception as e:
+            PipelineLogger.error(f"Failed to read metadata_struct.json for '{scheme_id}'", e)
+
+    metadata_path = os.path.join(scheme_dir, "db_metadata.json")
+    if os.path.isfile(metadata_path):
+        try:
+            with open(metadata_path, "r", encoding="utf-8") as f:
+                data_loaded = json.load(f)
+            raw_chunks = _extract_raw_chunks(data_loaded)
+
+            for i, raw_chunk in enumerate(raw_chunks):
+                chunk = normalize_chunk(raw_chunk, i)
+                meta = chunk.get("metadata", {})
+                if not isinstance(meta, dict):
+                    continue
+                for key, val in meta.items():
+                    if key not in field_values:
+                        field_values[key] = set()
+                    if isinstance(val, list):
+                        for item in val:
+                            if item is not None and str(item).strip():
+                                field_values[key].add(str(item).strip())
+                    elif val is not None and str(val).strip():
+                        field_values[key].add(str(val).strip())
+        except Exception as e:
+            PipelineLogger.error(f"Failed to scan db_metadata.json for '{scheme_id}'", e)
+
+    fields = [
+        {"key": key, "values": sorted(list(vals), key=lambda s: s.lower())}
+        for key, vals in sorted(field_values.items(), key=lambda item: item[0].lower())
+    ]
+    return {"scheme_id": scheme_id, "fields": fields}
+
+def normalize_metadata_filters(raw_filters: Any) -> Dict[str, List[str]]:
+    if not raw_filters or not isinstance(raw_filters, dict):
+        return {}
+    cleaned: Dict[str, List[str]] = {}
+    for key, val in raw_filters.items():
+        clean_key = str(key).strip()
+        if not clean_key:
+            continue
+        if isinstance(val, list):
+            vals = [str(item).strip() for item in val if item is not None and str(item).strip()]
+        elif isinstance(val, str):
+            vals = [part.strip() for part in val.split(",") if part.strip()]
+        elif val is not None and str(val).strip():
+            vals = [str(val).strip()]
+        else:
+            vals = []
+        if vals:
+            cleaned[clean_key] = vals
+    return cleaned
+
+def chunk_matches_metadata_filters(chunk: Dict[str, Any], filters: Dict[str, List[str]]) -> bool:
+    if not filters:
+        return True
+    meta = chunk.get("metadata", {})
+    if not isinstance(meta, dict):
+        return False
+
+    meta_ci = {str(mk).lower(): mv for mk, mv in meta.items()}
+    for filter_key, expected_vals in filters.items():
+        if not expected_vals:
+            continue
+        expected_lower = {v.lower() for v in expected_vals}
+        if filter_key in meta:
+            raw_val = meta[filter_key]
+        elif filter_key.lower() in meta_ci:
+            raw_val = meta_ci[filter_key.lower()]
+        else:
+            return False
+
+        if isinstance(raw_val, list):
+            chunk_vals = {str(x).strip().lower() for x in raw_val if x is not None and str(x).strip()}
+        elif raw_val is not None and str(raw_val).strip():
+            chunk_vals = {str(raw_val).strip().lower()}
+        else:
+            chunk_vals = set()
+
+        if not (chunk_vals & expected_lower):
+            return False
+    return True
 
 def normalize_chunk(raw_chunk: Any, fallback_idx: int = 0) -> Dict[str, Any]:
     if isinstance(raw_chunk, str):
@@ -242,14 +362,7 @@ class RAGIndex:
             self.last_loaded_time = os.path.getmtime(metadata_path)
             with open(metadata_path, "r", encoding="utf-8") as f:
                 data_loaded = json.load(f)
-            raw_chunks = []
-            if isinstance(data_loaded, list):
-                raw_chunks = data_loaded
-            elif isinstance(data_loaded, dict):
-                if "chunks" in data_loaded and isinstance(data_loaded["chunks"], list):
-                    raw_chunks = data_loaded["chunks"]
-                else:
-                    raw_chunks = list(data_loaded.values())
+            raw_chunks = _extract_raw_chunks(data_loaded)
             normalized_chunks = [normalize_chunk(c, i) for i, c in enumerate(raw_chunks)]
             if normalized_chunks and all("vector_index" in c and isinstance(c["vector_index"], int) for c in normalized_chunks):
                 normalized_chunks.sort(key=lambda x: x["vector_index"])
@@ -319,7 +432,13 @@ class RAGIndex:
 
 _index_cache = {}
 
-def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: int = 4) -> List[Dict[str, Any]]:
+def retrieve_hybrid(
+    query: str,
+    scheme_id: str,
+    pov_filter: str = "all",
+    top_k: int = 4,
+    metadata_filters: Optional[Dict[str, Any]] = None
+) -> List[Dict[str, Any]]:
     global _index_cache
     available_schemes = get_available_rag_schemes()
     PipelineLogger.rag(f"Available schemes in {RAG_SCHEMES_DIR}: {available_schemes}")
@@ -335,6 +454,25 @@ def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: 
         PipelineLogger.rag(f"No chunks loaded for scheme '{scheme_id}'. Returning empty results.")
         return []
 
+    normalized_filters = normalize_metadata_filters(metadata_filters)
+    if normalized_filters:
+        allowed_pairs = [
+            (i, chunk) for i, chunk in enumerate(index.chunks)
+            if chunk_matches_metadata_filters(chunk, normalized_filters)
+        ]
+        PipelineLogger.rag(
+            f"Metadata pre-filter {normalized_filters}: kept {len(allowed_pairs)}/{len(index.chunks)} chunks before search."
+        )
+    else:
+        allowed_pairs = list(enumerate(index.chunks))
+
+    if not allowed_pairs:
+        PipelineLogger.rag("No chunks remain after metadata pre-filter. Skipping embedding and BM25 search.")
+        return []
+
+    allowed_indices = [i for i, _ in allowed_pairs]
+    allowed_chunks = [c for _, c in allowed_pairs]
+
     faiss_hits = []
     if index.faiss_index:
         try:
@@ -349,11 +487,34 @@ def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: 
                 q_norm = np.linalg.norm(q_emb_arr)
                 if q_norm > 0:
                     q_emb_arr = q_emb_arr / q_norm
-                scores, indices = index.faiss_index.search(q_emb_arr, len(index.chunks))
-                PipelineLogger.rag(f"FAISS dense search completed. Best index match index: {indices[0][0]} with score {scores[0][0]}")
-                for score, idx in zip(scores[0], indices[0]):
-                    if idx != -1 and idx < len(index.chunks):
-                        faiss_hits.append(index.chunks[idx])
+
+                if normalized_filters:
+                    import faiss
+                    try:
+                        ids_arr = np.ascontiguousarray(allowed_indices, dtype=np.int64)
+                        sel = faiss.IDSelectorBatch(len(ids_arr), faiss.swig_ptr(ids_arr))
+                        params = faiss.SearchParameters(sel=sel)
+                        scores, indices = index.faiss_index.search(q_emb_arr, len(allowed_indices), params=params)
+                        for score, idx in zip(scores[0], indices[0]):
+                            if idx != -1 and idx < len(index.chunks):
+                                faiss_hits.append(index.chunks[idx])
+                    except Exception:
+                        reconstructed = np.vstack([index.faiss_index.reconstruct(int(i)) for i in allowed_indices]).astype(np.float32)
+                        if getattr(index.faiss_index, "metric_type", faiss.METRIC_INNER_PRODUCT) == faiss.METRIC_L2:
+                            sub_index = faiss.IndexFlatL2(index.faiss_index.d)
+                        else:
+                            sub_index = faiss.IndexFlatIP(index.faiss_index.d)
+                        sub_index.add(reconstructed)
+                        scores, sub_indices = sub_index.search(q_emb_arr, len(allowed_chunks))
+                        for score, sub_idx in zip(scores[0], sub_indices[0]):
+                            if sub_idx != -1 and sub_idx < len(allowed_chunks):
+                                faiss_hits.append(allowed_chunks[sub_idx])
+                else:
+                    scores, indices = index.faiss_index.search(q_emb_arr, len(index.chunks))
+                    PipelineLogger.rag(f"FAISS dense search completed. Best index match index: {indices[0][0]} with score {scores[0][0]}")
+                    for score, idx in zip(scores[0], indices[0]):
+                        if idx != -1 and idx < len(index.chunks):
+                            faiss_hits.append(index.chunks[idx])
         except Exception as e:
             PipelineLogger.error(f"FAISS dense retrieval failed: {e}")
     else:
@@ -365,12 +526,20 @@ def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: 
             filtered_tokens = remove_stop_words(query)
             if not filtered_tokens:
                 filtered_tokens = query.lower().split()
-            scores = index.bm25.get_scores(filtered_tokens)
+            if normalized_filters:
+                chunks_pool = allowed_chunks
+                bm25_engine = BM25Okapi([chunk["text"].lower().split() for chunk in chunks_pool])
+                log_suffix = " on filtered chunks"
+            else:
+                chunks_pool = index.chunks
+                bm25_engine = index.bm25
+                log_suffix = ""
+            scores = bm25_engine.get_scores(filtered_tokens)
             ranked_indices = np.argsort(scores)[::-1]
-            PipelineLogger.rag(f"BM25 sparse search completed. Tokenized query: {filtered_tokens}")
+            PipelineLogger.rag(f"BM25 sparse search completed{log_suffix}. Tokenized query: {filtered_tokens}")
             for idx in ranked_indices:
-                if scores[idx] > 0 and idx < len(index.chunks):
-                    bm25_hits.append(index.chunks[idx])
+                if scores[idx] > 0 and idx < len(chunks_pool):
+                    bm25_hits.append(chunks_pool[idx])
             PipelineLogger.rag(f"BM25 found {len(bm25_hits)} matching sparse chunks.")
         except Exception as e:
             PipelineLogger.error(f"BM25 sparse retrieval failed: {e}")
@@ -385,7 +554,7 @@ def retrieve_hybrid(query: str, scheme_id: str, pov_filter: str = "all", top_k: 
             seen_ids.add(cid)
             candidate_hits.append(chunk)
 
-    skip_pov = pov_filter is None or str(pov_filter).strip().lower() in ["none", "null", ""]
+    skip_pov = is_empty_pov(pov_filter)
     pov_hits = []
     if skip_pov:
         PipelineLogger.rag(f"POV filter is '{pov_filter}'. Skipping POV filtering entirely.")
@@ -469,13 +638,8 @@ def rewrite_query(user_message: str, history: List[Dict[str, str]], current_goal
         return user_message
     context_turns = history[-3:] if history else []
     formatted_history = ""
-    for turn in context_turns:
-        if isinstance(turn, str):
-            formatted_history += f"USER: {turn}\n"
-        elif isinstance(turn, dict):
-            role = turn.get("role", "user")
-            text = turn.get("text", turn.get("content", ""))
-            formatted_history += f"{role.upper()}: {text}\n"
+    for role, text in iter_history_turns(context_turns):
+        formatted_history += f"{role.upper()}: {text}\n"
     goal_part = f"\nCurrent Active Dialogue Goal / Topic:\n{current_goal}\n" if current_goal else ""
     prompt = f"""
         Given the conversational history, the active dialogue goal/topic, and the user's latest query,

@@ -1,0 +1,6 @@
+{
+  "unknown_files": [
+    "backend/scripts/utils/config.py",
+    "backend/scripts/utils/helpers.py"
+  ]
+}

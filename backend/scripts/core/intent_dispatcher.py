@@ -64,10 +64,7 @@ def build_intent_tools(
 
     for node in reactive_nodes:
         node_id = node.get("id")
-        if not node_id:
-            continue
-
-        if active_flow and active_flow != "main" and node_id == active_flow:
+        if not node_id or (active_flow and active_flow != "main" and node_id == active_flow):
             continue
 
         trigger_intent = node.get("trigger_intent", f"User intent for {node_id}")
@@ -132,10 +129,7 @@ def build_jev_choice_schema(
 
     for node in reactive_nodes:
         node_id = node.get("id")
-        if not node_id:
-            continue
-
-        if active_flow and active_flow != "main" and node_id == active_flow:
+        if not node_id or (active_flow and active_flow != "main" and node_id == active_flow):
             continue
 
         base_name = (node.get("displayName") or node.get("label") or node_id).strip()

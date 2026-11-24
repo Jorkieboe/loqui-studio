@@ -272,3 +272,97 @@ When click save the mouse position of the click. At that location the node will 
 
 ---
 
+## [2026-11-20 16:40:30] • Instruct Input
+
+I want to make some changes to improve the rag search. i have an example
+  {
+    "vector_index": 15,
+    "chunk_id": "553f114a-0322-4e72-8de0-3ae2f7904d65",
+    "document_id": "4ab6bcb5-ac5b-472b-a514-2a2981cf6c75",
+    "document_name": "bredainfo.docx",
+    "order_index": 28,
+    "text_content": "These woods near Breda belonged to the Nassaus. Henry III had the Mastbos planted. The trunks of the conifers were well suited for ship masts. At the Liesbos, you can see two colourful \u2018Blind Walls\u2019. Both murals feature herons, as they were once hunted there and served as a delicacy.",
+    "breadcrumb": "bredainfo.docx > The Royal Roots Top 10 > Mastbos and Liesbos > These woods near Breda belonged to the Nassaus. Henry III had the Mastbos planted. The trunks of the conifers were well suited for ship masts. At the Liesbos, you can see two colourful \u2018Blind Walls\u2019. Both murals feature herons, as they were once hunted there and served as a delicacy.",
+    "metadata": {
+      "type_of_tip": [
+        "activity",
+        "culture"
+      ],
+      "location": "Breda"
+    }
+  },
+
+We have in the meta data type of activity. this chunk is relevant for culture or activity. SO when creating a flow i want to list the metadata entries and be able to fill in what to expect. Then we can add an extra filter so that before it does any embedding search all food related chunks are removed in this flow
+
+---
+
+## [2026-11-24 14:52:35] • Instruct Input
+
+I see in a lot places that i uses double if statements like:
+
+if not loop_id:
+            loop_id = node.get("loop_id") or node.get("target_loop") or node.get("loop")
+
+        if not loop_id:
+            for next_item in next_list:
+                target = next_item.get("target") if isinstance(next_item, dict) else next_item
+                if target:
+                    target_node = next((n for n in var_prompt if n.get("id") == target), None)
+                    if target_node and (target_node.get("type") in ["loop-node", "loop"] or "loop" in target_node.get("id", "")):
+                        loop_id = target
+                        break
+
+---
+
+## [2026-11-24 14:52:39] • Instruct Input
+
+I
+
+---
+
+## [2026-11-24 14:54:12] • Instruct Input
+
+I see in a lot places that i uses multiple if statement below each other while they can be combined. that is unneccesary. like in chatsession.py. here we have a doulbe 'if not loop_id'. And i notice it in more places
+
+  if not loop_id:
+            loop_id = node.get("loop_id") or node.get("target_loop") or node.get("loop")
+
+        if not loop_id:
+            for next_item in next_list:
+                target = next_item.get("target") if isinstance(next_item, dict) else next_item
+                if target:
+                    target_node = next((n for n in var_prompt if n.get("id") == target), None)
+                    if target_node and (target_node.get("type") in ["loop-node", "loop"] or "loop" in target_node.get("id", "")):
+                        loop_id = target
+                        break
+
+---
+
+## [2026-11-24 14:59:39] • Instruct Input
+
+Default prompt: DRY Up Code
+
+---
+
+## [2026-11-24 16:29:25] • Instruct Input
+
+In chatview when i delete a session the list should refresh but it does not
+
+---
+
+## [2026-11-24 16:34:16] • Instruct Input
+
+I have also another issue. When selecting a character from character view a session is instantly created i do not want to create the session until i sent a message. 
+
+So from character view remove create session.
+Then a new a chat window is opened without an id. 
+then when send a new message first check if there is a session. if not yet create one and after that send the message
+
+---
+
+## [2026-11-24 16:49:16] • Instruct Input
+
+I want to make the chatbtn in chatview change in color. What i want to side is replace the image with a div with a background color. and then use the image as a mask on alpha. So colored part of the mask is visbile
+
+---
+

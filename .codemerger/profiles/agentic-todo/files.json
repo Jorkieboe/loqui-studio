@@ -15,6 +15,9 @@
     "backend/scripts/tests/test_phase2_dispatcher.py",
     "backend/scripts/tests/test_phase4_validation.py",
     "backend/scripts/tests/test_phase5_e2e_bnb.py",
+    "backend/scripts/utils/config.py",
+    "backend/scripts/utils/helpers.py",
+    "frontend/src/components/MetadataFilterEditor.vue",
     "todo.md",
     "todo_old.md"
   ]

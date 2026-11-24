@@ -1,1 +1,780 @@
-null
+{
+  "tree": {
+    "name": "System Architecture",
+    "description": "**Loqui Studio** is a full-stack character authoring platform and interactive conversational engine built around a split **FastAPI ASGI backend** and **Vue 3 SPA frontend**. The system divides its logic across four primary domains: a **Backend Core & API** layer (handling Socket.IO real-time streaming, finite-state dialogue orchestration, hybrid FAISS/BM25 RAG, and local/cloud LLM & speech services), a **Frontend SPA** (providing Vue Flow node-graph authoring, live sandbox debugging, and text/voice chat interfaces), a **Verification & Testing Suite** (validating schemas, intent dispatching, topology rules, and end-to-end flows), and **Infrastructure & Documentation** (automating dual-stack bootstrapping and capturing architectural constraints).",
+    "children": [
+      {
+        "name": "Backend Core & API",
+        "description": "Houses the **Python FastAPI and Socket.IO server**, orchestrating finite-state dialogue traversal, hybrid retrieval-augmented generation, SQLite conversation persistence, and multimodal STT/TTS pipelines.",
+        "domain": "backend",
+        "children": [
+          {
+            "name": "Application Entry & API Layer",
+            "description": "Exposes **HTTP REST endpoints and real-time Socket.IO channels**, backed by SQLite persistence and structured terminal logging.",
+            "children": [
+              {
+                "name": "Server Entry & Configuration",
+                "description": "Bootstraps the **ASGI runtime, CORS policies, and Socket.IO event handlers** while loading system-wide LLM, Ollama, and Jev presets.",
+                "files": [
+                  {
+                    "path": "backend/main.py",
+                    "description": "Acts as the **primary ASGI entry point**, binding a `socketio.AsyncServer` together with the FastAPI application and registering character and conversation routers. It orchestrates real-time `chat_message` and `audio_message` Socket.IO events through `process_dialogue_turn`, lazily loads Whisper STT and OmniVoice TTS models, and mounts compiled frontend static assets when available."
+                  },
+                  {
+                    "path": "backend/config.json",
+                    "description": "Centralizes **runtime configuration defaults**, including server host/port bindings, `idle_timeout_seconds`, and `llm_presets` parameters. It also defines connection settings and model identifiers for both local **Ollama** inference/embeddings and the external **Jev** intent-classification API."
+                  }
+                ],
+                "id": 4,
+                "domain": "backend",
+                "color": "#0078D4",
+                "weight": 2,
+                "layout": {
+                  "x": 0,
+                  "y": 50,
+                  "w": 50,
+                  "h": 50
+                }
+              },
+              {
+                "name": "REST API Endpoints",
+                "description": "Provides **RESTful resource handlers** for character asset CRUD, ephemeral draft sandbox execution, and persistent chat history management.",
+                "files": [
+                  {
+                    "path": "backend/scripts/api/character.py",
+                    "description": "Implements the **`/api/characters` router**, managing atomic file reads/writes for `info.json`, `prompts.yaml` (via a block-style `ruamel.yaml` round-trip parser), `layout.json`, and avatar uploads. It also exposes `/rag-schemes` metadata discovery and the `/test-draft` endpoint that runs the **unified dialogue pipeline** against transient unsaved editor payloads."
+                  },
+                  {
+                    "path": "backend/scripts/api/conversation.py",
+                    "description": "Defines the **`/api/conversations` FastAPI router** with Pydantic request schemas for creating, listing, updating, and deleting persistent chat sessions. It delegates database operations to `conversation_repo` to track `current_node_id` and append `user` or `character` messages."
+                  }
+                ],
+                "id": 5,
+                "domain": "backend",
+                "color": "#0078D4",
+                "weight": 2,
+                "layout": {
+                  "x": 50,
+                  "y": 50,
+                  "w": 50,
+                  "h": 50
+                }
+              },
+              {
+                "name": "Persistence & Logging",
+                "description": "Manages **SQLite relational storage** for conversation threads and provides **color-coded console telemetry** across pipeline stages.",
+                "files": [
+                  {
+                    "path": "backend/scripts/db/__init__.py",
+                    "description": "Marks `backend/scripts/db` as a **Python package**, enabling modular imports of the SQLite connection manager and repository functions across the API layer."
+                  },
+                  {
+                    "path": "backend/scripts/db/database.py",
+                    "description": "Configures the **SQLite database connection and schema initialization** (`loqui_studio.db`), enforcing foreign keys and row-factory dictionary mapping. Its `_SCHEMA` defines the `conversations` and `messages` tables with cascading deletes and role constraints."
+                  },
+                  {
+                    "path": "backend/scripts/db/conversation_repo.py",
+                    "description": "Implements the **data access repository** encapsulating all SQL queries for conversation lifecycle management and message insertion. Notably, `list_conversations` uses a `MAX(rowid)` subquery to efficiently fetch each thread's latest message preview ordered by `updated_at`."
+                  },
+                  {
+                    "path": "backend/scripts/utils/logger.py",
+                    "description": "Provides the **`PipelineLogger` utility** powered by `rich.console.Console` with a custom color theme. It standardizes structured diagnostic output across RAG retrieval, LLM streaming status, STT transcription, and FSM flow transitions."
+                  }
+                ],
+                "id": 6,
+                "domain": "backend",
+                "color": "#0078D4",
+                "weight": 4,
+                "layout": {
+                  "x": 0,
+                  "y": 0,
+                  "w": 100,
+                  "h": 50
+                }
+              }
+            ],
+            "id": 3,
+            "domain": "backend",
+            "color": "#0078D4",
+            "files": [],
+            "weight": 9,
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 34.61538461538461
+            }
+          },
+          {
+            "name": "Dialogue Orchestration & State",
+            "description": "Controls **conversational state transitions, intent routing, and graph topology integrity** independently of frontend presentation libraries.",
+            "children": [
+              {
+                "name": "Pipeline & FSM Traversal",
+                "description": "Executes the **unified dialogue loop**, combining dynamic reactive intent evaluation with deterministic FSM node stepping and prompt assembly.",
+                "files": [
+                  {
+                    "path": "backend/scripts/core/orchestrator.py",
+                    "description": "Contains **`run_dialogue_pipeline`**, the unified execution engine shared by live Socket.IO sessions and ephemeral `/test-draft` runs. It coordinates Ollama model preloading, reactive intent dispatching, open-topic shelving/resumption, bridge directives, Hybrid RAG fetching/reuse, and final system/user prompt construction."
+                  },
+                  {
+                    "path": "backend/scripts/core/chatsession.py",
+                    "description": "Implements **FSM graph traversal** via `traverse_fsm`, `get_automatic_transition`, and `evaluate_prompt_transition`. It automatically advances through control nodes (`start-node`, `loop-node`, `cycle-node`, `end-node`) while invoking LLM classification when a prompt node branches across multiple conditional targets."
+                  },
+                  {
+                    "path": "backend/scripts/core/intent_dispatcher.py",
+                    "description": "Manages **dynamic reactive topic switching** by converting `reactive` nodes and shelved `open_topics` into tool schemas (`build_intent_tools`) and Jev choice schemas (`build_jev_choice_schema`). In `evaluate_intent`, it queries the Jev decision API when configured or falls back to keyword scoring via `_fallback_intent_match`."
+                  }
+                ],
+                "id": 8,
+                "domain": "backend",
+                "color": "#0078D4",
+                "weight": 3,
+                "layout": {
+                  "x": 0,
+                  "y": 0,
+                  "w": 100,
+                  "h": 50
+                }
+              },
+              {
+                "name": "Session & Schema Management",
+                "description": "Tracks **transient runtime state**, defines Pydantic validation contracts for draft payloads, and enforces **structural graph rules**.",
+                "files": [
+                  {
+                    "path": "backend/scripts/core/session_manager.py",
+                    "description": "Defines **`ChatSession`, `Session`, and `SessionManager`** to maintain per-connection in-memory conversation state. Beyond history and `current_node_id`, `ChatSession` tracks `loop_counters`, `active_flow_id`, `open_topics` stacks, and `last_retrieved_chunks` for RAG reuse."
+                  },
+                  {
+                    "path": "backend/scripts/core/context.py",
+                    "description": "Declares **Pydantic data models** (`SessionState`, `DraftConfig`, and `EphemeralPayload`) that formalize the structure of transient testing payloads. These models capture in-memory `info`, `prompts`, `layout`, and active session pointers passed between editor and backend."
+                  },
+                  {
+                    "path": "backend/scripts/core/validation.py",
+                    "description": "Provides **`validate_character_graph`**, a breadth-first graph crawler that inspects `var_prompt` node topologies. It enforces the architectural invariant that every `reactive` node in `flow` mode has a reachable path terminating at a `bridge-node`."
+                  }
+                ],
+                "id": 9,
+                "domain": "backend",
+                "color": "#0078D4",
+                "weight": 3,
+                "layout": {
+                  "x": 0,
+                  "y": 50,
+                  "w": 100,
+                  "h": 50
+                }
+              }
+            ],
+            "id": 7,
+            "domain": "backend",
+            "color": "#0078D4",
+            "files": [],
+            "weight": 7,
+            "layout": {
+              "x": 0,
+              "y": 34.61538461538461,
+              "w": 41.17647058823529,
+              "h": 65.38461538461539
+            }
+          },
+          {
+            "name": "AI & Retrieval Services",
+            "description": "Abstracts **local and cloud AI providers** for text generation, dense/sparse hybrid retrieval, and voice synthesis/recognition.",
+            "children": [
+              {
+                "name": "LLM & Hybrid RAG Engines",
+                "description": "Delivers **provider-agnostic LLM streaming**, local Ollama VRAM lifecycle management, and **FAISS + BM25 Hybrid RAG** with POV and metadata filtering.",
+                "files": [
+                  {
+                    "path": "backend/scripts/services/llm_service.py",
+                    "description": "Implements **`api_request` and token counting** (`tiktoken`), dynamically routing chat completions to local Ollama (`/api/chat`), OpenAI cloud models, or an offline simulation fallback. It maps preset hyperparameters across providers and yields uniform streaming generators."
+                  },
+                  {
+                    "path": "backend/scripts/services/ollama_service.py",
+                    "description": "Manages **local Ollama daemon health and model residency** via HTTP calls to `/api/ps` and `/api/generate`. Its `manage_models` routine unloads unused models and preloads configured `llm_model` and `embedding_model` instances with persistent `keep_alive`."
+                  },
+                  {
+                    "path": "backend/scripts/services/rag_service.py",
+                    "description": "Implements the **Hybrid RAG subsystem** (`RAGIndex` and `retrieve_hybrid`), combining `BM25Okapi` lexical scoring (with English/Dutch spaCy stop-word removal) and `FAISS` dense vector search fused via Reciprocal Rank Fusion (RRF). It also supports query rewriting, **POV filtering**, metadata pre-filtering, E5 `query:`/`passage:` prefixes, and automatic index reloading."
+                  }
+                ],
+                "id": 11,
+                "domain": "backend",
+                "color": "#0078D4",
+                "weight": 3,
+                "layout": {
+                  "x": 0,
+                  "y": 0,
+                  "w": 100,
+                  "h": 60
+                }
+              },
+              {
+                "name": "Speech Processing (STT & TTS)",
+                "description": "Provides **lazy-loaded, thread-safe local audio pipelines** for converting visitor speech to text and synthesizing character voice replies.",
+                "files": [
+                  {
+                    "path": "backend/scripts/services/transcription_service.py",
+                    "description": "Handles **local Whisper STT** by asynchronously lazy-loading `openai/whisper-tiny` in a daemon thread to avoid blocking server startup. It decodes incoming WebM audio bytes into 16kHz float32 PCM via `ffmpeg` pipes and runs language-aware transcription."
+                  },
+                  {
+                    "path": "backend/scripts/services/tts_service.py",
+                    "description": "Integrates the **OmniVoice zero-shot TTS engine** (`k2-fsa/OmniVoice`), preloading the model asynchronously and synchronizing inference with locks. It resolves per-character reference audio and transcripts (`resolve_character_ref_audio`) and outputs 24kHz WAV byte buffers."
+                  }
+                ],
+                "id": 12,
+                "domain": "backend",
+                "color": "#0078D4",
+                "weight": 2,
+                "layout": {
+                  "x": 0,
+                  "y": 60,
+                  "w": 100,
+                  "h": 40
+                }
+              }
+            ],
+            "id": 10,
+            "domain": "backend",
+            "color": "#0078D4",
+            "files": [],
+            "weight": 6,
+            "layout": {
+              "x": 41.17647058823529,
+              "y": 34.61538461538461,
+              "w": 58.82352941176471,
+              "h": 39.23076923076923
+            }
+          },
+          {
+            "name": "Character Assets",
+            "description": "Stores **file-based character definitions** using decoupled metadata, YAML prompt graphs, and visual canvas coordinates.",
+            "children": [
+              {
+                "name": "Henk de Bredanaar Persona",
+                "description": "Concrete character blueprint for **Henk, a Breda B&B host**, demonstrating Dutch dialect instructions, RAG metadata filters, loops, and reactive sub-flows.",
+                "files": [
+                  {
+                    "path": "backend/assets/characters/henk_de_bredanaar/info.json",
+                    "description": "Defines **core character metadata** for `henk_de_bredanaar`, setting Dutch language (`nl`), UI accent color, idle timeout bounds, and RAG binding to the `Breda` scheme without POV restrictions."
+                  },
+                  {
+                    "path": "backend/assets/characters/henk_de_bredanaar/prompts.yaml",
+                    "description": "Contains Henk's **complete behavioral and dialogue graph** (`base_prompt`, `do`/`don't` guardrails, `context`, and `var_prompt` nodes). It exercises `start-node`, `loop-node`, bridged `reactive` flows (`Eten` and `Reactive Flow` with `rag_filters`), and `standalone` reactive deflections."
+                  },
+                  {
+                    "path": "backend/assets/characters/henk_de_bredanaar/layout.json",
+                    "description": "Persists the **2D visual coordinates and edge connections** for Henk's node graph in the editor canvas, keeping frontend layout geometry decoupled from backend `prompts.yaml` execution logic."
+                  }
+                ],
+                "id": 14,
+                "domain": "backend",
+                "color": "#0078D4",
+                "weight": 3,
+                "layout": {
+                  "x": 0,
+                  "y": 0,
+                  "w": 100,
+                  "h": 100
+                }
+              }
+            ],
+            "id": 13,
+            "domain": "backend",
+            "color": "#0078D4",
+            "files": [],
+            "weight": 4,
+            "layout": {
+              "x": 41.17647058823529,
+              "y": 73.84615384615384,
+              "w": 58.82352941176471,
+              "h": 26.153846153846153
+            }
+          }
+        ],
+        "id": 2,
+        "color": "#0078D4",
+        "files": [],
+        "weight": 27,
+        "layout": {
+          "x": 0,
+          "y": 0,
+          "w": 100,
+          "h": 39.130434782608695
+        }
+      },
+      {
+        "name": "Frontend SPA",
+        "description": "Implements the **Vue 3 and Vite single-page application**, providing character discovery, persistent text/voice chat, and a node-based visual character studio with live sandbox debugging.",
+        "domain": "frontend",
+        "children": [
+          {
+            "name": "Application Bootstrap & Shell",
+            "description": "Configures **Vite dev proxying, module aliases, Pinia state, Vue Router navigation**, and shared HTTP history helpers.",
+            "children": [
+              {
+                "name": "Build & Entry Setup",
+                "description": "Establishes the **HTML shell, Vite API/WebSocket proxy, global CSS design tokens**, and root Vue instance mounting.",
+                "files": [
+                  {
+                    "path": "frontend/index.html",
+                    "description": "Serves as the **SPA HTML entry template**, mounting the `#app` container and loading `/src/main.js` as an ES module."
+                  },
+                  {
+                    "path": "frontend/vite.config.mjs",
+                    "description": "Configures **Vite build plugins (`vue`, `vueDevTools`) and dev-server proxying**, forwarding `/api` HTTP requests and `/socket.io` WebSocket upgrades to the FastAPI backend at `127.0.0.1:5000`."
+                  },
+                  {
+                    "path": "frontend/jsconfig.json",
+                    "description": "Configures **JavaScript IDE path resolution**, mapping the `@/*` alias to `./src/*` for consistent editor intellisense."
+                  },
+                  {
+                    "path": "frontend/src/main.js",
+                    "description": "Bootstraps the **Vue 3 application instance**, registering Pinia state management and Vue Router before mounting `App.vue`."
+                  },
+                  {
+                    "path": "frontend/src/App.vue",
+                    "description": "Renders the **top-level application shell**, pairing the persistent `AppNavbar` with `<router-view />` and defining global CSS custom properties (`--primary`, `--border`, `--nav-height`) and viewport flex layout."
+                  }
+                ],
+                "id": 17,
+                "domain": "frontend",
+                "color": "#0D8319",
+                "weight": 5,
+                "layout": {
+                  "x": 0,
+                  "y": 0,
+                  "w": 100,
+                  "h": 62.5
+                }
+              },
+              {
+                "name": "Routing, State & Utilities",
+                "description": "Coordinates **client-side routes, shared navbar actions, and REST API wrappers** for conversation persistence.",
+                "files": [
+                  {
+                    "path": "frontend/src/router/index.js",
+                    "description": "Defines the **Vue Router history configuration**, mapping `/`, `/characters`, `/characters/new`, `/characters/:id/edit`, and `/chat/:id?` to their corresponding page views."
+                  },
+                  {
+                    "path": "frontend/src/stores/navbar.js",
+                    "description": "Implements the **`useNavbarStore` Pinia store**, allowing views like `CharacterEditorView` to dynamically inject contextual action buttons (such as **Save**) into the global `AppNavbar`."
+                  },
+                  {
+                    "path": "frontend/src/utils/chatHistory.js",
+                    "description": "Provides **async fetch wrappers** around `/api/conversations` (`getSessions`, `createSession`, `getSession`, `deleteSession`, `appendMessage`, and `updateNode`) to synchronize chat UI state with SQLite persistence."
+                  }
+                ],
+                "id": 18,
+                "domain": "frontend",
+                "color": "#0D8319",
+                "weight": 3,
+                "layout": {
+                  "x": 0,
+                  "y": 62.5,
+                  "w": 100,
+                  "h": 37.5
+                }
+              }
+            ],
+            "id": 16,
+            "domain": "frontend",
+            "color": "#0D8319",
+            "files": [],
+            "weight": 9,
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 40.909090909090914
+            }
+          },
+          {
+            "name": "Page Views",
+            "description": "Delivers the **primary user workflows** across recent activity dashboards, character catalogs, live multimodal chat, and persona authoring.",
+            "children": [
+              {
+                "name": "Discovery & Live Chat Views",
+                "description": "Powers **character selection, conversation history browsing, and real-time text/voice Socket.IO sessions**.",
+                "files": [
+                  {
+                    "path": "frontend/src/views/HomeView.vue",
+                    "description": "Displays the **landing dashboard** featuring recently available character cards and a two-column grid of past conversation sessions, enabling one-click resumption or new chat creation."
+                  },
+                  {
+                    "path": "frontend/src/views/CharactersView.vue",
+                    "description": "Renders the **character gallery grid** fetched from `/api/characters`, combining a dashed `+` creation card with `CharacterCard` tiles that route either to live chat or the visual editor."
+                  },
+                  {
+                    "path": "frontend/src/views/ChatView.vue",
+                    "description": "Implements the **full-featured live chat interface** with a session-history sidebar, Socket.IO streaming text bubbles, hold-to-record WebM `MediaRecorder` voice capture, and sequential `Audio` playback of synthesized TTS WAV responses."
+                  }
+                ],
+                "id": 20,
+                "domain": "frontend",
+                "color": "#0D8319",
+                "weight": 3,
+                "layout": {
+                  "x": 0,
+                  "y": 0,
+                  "w": 100,
+                  "h": 60
+                }
+              },
+              {
+                "name": "Character Authoring Views",
+                "description": "Supports **bootstrapping new character templates** and editing personas via synchronized forms, node graphs, and live testing.",
+                "files": [
+                  {
+                    "path": "frontend/src/views/CharacterNewView.vue",
+                    "description": "Provides the **character creation wizard**, slugifying the template name and persisting a starter `info.json`, `prompts.yaml`, and `layout.json` (`Start` -> `Welcome`) before redirecting to the editor."
+                  },
+                  {
+                    "path": "frontend/src/views/CharacterEditorView.vue",
+                    "description": "Serves as the **unified character studio** (`Base prompt` and `Graph` tabs), managing in-memory drafts, avatar uploads, node property inspectors, automatic `bridge-node` spawning for reactive flows, topology validation, and live `TestChatPanel` previews."
+                  }
+                ],
+                "id": 21,
+                "domain": "frontend",
+                "color": "#0D8319",
+                "weight": 2,
+                "layout": {
+                  "x": 0,
+                  "y": 60,
+                  "w": 100,
+                  "h": 40
+                }
+              }
+            ],
+            "id": 19,
+            "domain": "frontend",
+            "color": "#0D8319",
+            "files": [],
+            "weight": 6,
+            "layout": {
+              "x": 53.84615384615385,
+              "y": 40.909090909090914,
+              "w": 46.15384615384615,
+              "h": 59.090909090909086
+            }
+          },
+          {
+            "name": "Reusable UI Components",
+            "description": "Encapsulates **modular presentation and authoring widgets**, including the Vue Flow canvas, metadata chip selectors, and sandbox debuggers.",
+            "children": [
+              {
+                "name": "Navigation & Cards",
+                "description": "Supplies **consistent top-bar navigation** and interactive **character preview cards**.",
+                "files": [
+                  {
+                    "path": "frontend/src/components/AppNavbar.vue",
+                    "description": "Renders the **global top navigation bar** with active route highlighting (`Characters`, `Chat`) and a reactive action button bound to `useNavbarStore`."
+                  },
+                  {
+                    "path": "frontend/src/components/CharacterCard.vue",
+                    "description": "Displays a **3:4 aspect-ratio character card** with avatar fallback, hover gradient overlays, description reveal, and an optional quick-edit trigger button."
+                  }
+                ],
+                "id": 23,
+                "domain": "frontend",
+                "color": "#0D8319",
+                "weight": 2,
+                "layout": {
+                  "x": 0,
+                  "y": 66.66666666666666,
+                  "w": 100,
+                  "h": 33.33333333333334
+                }
+              },
+              {
+                "name": "Graph & Sandbox Components",
+                "description": "Implements the **Vue Flow visual editor**, RAG metadata filter UI, client-side validation gate, and **telemetry-rich test chat panel**.",
+                "files": [
+                  {
+                    "path": "frontend/src/components/GraphEditor.vue",
+                    "description": "Wraps **`@vue-flow/core`** to render custom node templates (`start`, `end`, `loop` with Body/Exit handles, `cycle`, `bridge`, `reactive`, `prompt`, `deflect`, `silence`), right-click context menus, edge reconnection, and active-node pulse highlighting."
+                  },
+                  {
+                    "path": "frontend/src/components/MetadataFilterEditor.vue",
+                    "description": "Provides an **interactive RAG metadata filter editor** populated from scheme catalogs, allowing authors to toggle chip values or enter comma-separated filter criteria on start, reactive flow, and fetch nodes."
+                  },
+                  {
+                    "path": "frontend/src/components/ValidationBlock.vue",
+                    "description": "Acts as a **visual testing gatekeeper** inside the editor's sandbox column, listing unmet persona or graph topology validation errors until the draft is ready for `/test-draft` execution."
+                  },
+                  {
+                    "path": "frontend/src/components/TestChatPanel.vue",
+                    "description": "Delivers the **in-editor sandbox chat and debug inspector**, invoking `/api/characters/test-draft`, copying formatted node-tagged logs, and rendering expandable drawers for `active_flow_id`, `intent`, `open_topics`, `dynamic_tools`, retrieved RAG chunks, and exact LLM prompts."
+                  }
+                ],
+                "id": 24,
+                "domain": "frontend",
+                "color": "#0D8319",
+                "weight": 4,
+                "layout": {
+                  "x": 0,
+                  "y": 0,
+                  "w": 100,
+                  "h": 66.66666666666666
+                }
+              }
+            ],
+            "id": 22,
+            "domain": "frontend",
+            "color": "#0D8319",
+            "files": [],
+            "weight": 7,
+            "layout": {
+              "x": 0,
+              "y": 40.909090909090914,
+              "w": 53.84615384615385,
+              "h": 59.090909090909086
+            }
+          }
+        ],
+        "id": 15,
+        "color": "#0D8319",
+        "files": [],
+        "weight": 23,
+        "layout": {
+          "x": 0,
+          "y": 39.130434782608695,
+          "w": 54.761904761904766,
+          "h": 60.869565217391305
+        }
+      },
+      {
+        "name": "Verification & Testing Suite",
+        "description": "Provides **automated phase checkpoints and standalone CLI test harnesses** to verify schemas, Jev intent dispatching, graph topology validation, Hybrid RAG, TTS, and multi-turn orchestration.",
+        "domain": "testing",
+        "children": [
+          {
+            "name": "Phased Reactive Flow Tests",
+            "description": "Implements the **four structured checkpoint scripts** verifying the reactive sub-flow and bridge-node architecture.",
+            "files": [
+              {
+                "path": "backend/scripts/tests/test_phase1_schemas.py",
+                "description": "Verifies **Phase 1 data models**, asserting `ChatSession` flow/topic fields (`active_flow_id`, `open_topics`) and YAML serialization round-trips for `reactive` and `bridge-node` definitions."
+              },
+              {
+                "path": "backend/scripts/tests/test_phase2_dispatcher.py",
+                "description": "Tests **Phase 2 intent routing**, validating dynamic tool schema generation, `evaluate_intent` classification against multi-turn history, and `assemble_bridge_directive` output for shelved topics."
+              },
+              {
+                "path": "backend/scripts/tests/test_phase4_validation.py",
+                "description": "Validates **Phase 4 graph crawling** in `validate_character_graph`, confirming that unbridged reactive flows are rejected while properly bridged graphs pass cleanly."
+              },
+              {
+                "path": "backend/scripts/tests/test_phase5_e2e_bnb.py",
+                "description": "Executes a **Phase 5 end-to-end multi-turn simulation** (`Host Bram`), asserting flow pivoting, topic shelving into `open_topics`, bridge-node prompting, and resumption of the paused dining flow."
+              }
+            ],
+            "id": 26,
+            "domain": "testing",
+            "color": "#4B5563",
+            "weight": 4,
+            "layout": {
+              "x": 0,
+              "y": 55.55555555555556,
+              "w": 100,
+              "h": 44.44444444444444
+            }
+          },
+          {
+            "name": "Standalone Subsystem Harnesses",
+            "description": "Offers **targeted developer scripts** for exercising orchestration, HTTP draft testing, RAG queries, Jev decisions, and OmniVoice synthesis in isolation.",
+            "files": [
+              {
+                "path": "backend/scripts/test_orchestration.py",
+                "description": "Runs an **async orchestration smoke test** loading the `example` character and a `hussite_wars` RAG scenario to verify FSM traversal, chunk retrieval, and streaming LLM responses."
+              },
+              {
+                "path": "backend/scripts/test_draft_endpoint.py",
+                "description": "Exercises the **live `/api/characters/test-draft` HTTP endpoint**, verifying both 200 OK grounded pipeline execution and 422 validation rejection on incomplete payloads."
+              },
+              {
+                "path": "backend/scripts/test_rag.py",
+                "description": "Provides a **CLI tester for `retrieve_hybrid`**, accepting query, scheme, POV filter, and `top_k` arguments to inspect retrieved chunks and extracted metadata categories."
+              },
+              {
+                "path": "backend/scripts/test_intent_jev.py",
+                "description": "Tests **Jev API intent decision-making**, validating choice-schema construction (`--schema-only`), live scenario accuracy, and single-character queries against `JEV_API_KEY`."
+              },
+              {
+                "path": "backend/scripts/test_tts.py",
+                "description": "Serves as a **minimal OmniVoice TTS benchmark script**, loading `k2-fsa/OmniVoice` on CUDA and synthesizing a Dutch sample prompt into `out.wav`."
+              }
+            ],
+            "id": 27,
+            "domain": "testing",
+            "color": "#4B5563",
+            "weight": 5,
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 55.55555555555556
+            }
+          }
+        ],
+        "id": 25,
+        "color": "#4B5563",
+        "files": [],
+        "weight": 10,
+        "layout": {
+          "x": 54.761904761904766,
+          "y": 39.130434782608695,
+          "w": 45.238095238095234,
+          "h": 32.036613272311214
+        }
+      },
+      {
+        "name": "Infrastructure & Documentation",
+        "description": "Consolidates **cross-stack environment setup scripts, package manifests, and design documentation** detailing architecture decisions and implementation plans.",
+        "domain": "infrastructure",
+        "children": [
+          {
+            "name": "Environment & Dependency Tooling",
+            "description": "Automates **Python virtual environments, GPU-aware PyTorch installation, Node dependencies**, and concurrent dev-server execution.",
+            "files": [
+              {
+                "path": "go.bat",
+                "description": "Acts as the **unified Windows launcher and setup script**, creating a Python 3.12 `.venv` via `uv`, auto-detecting NVIDIA GPUs (`nvidia-smi`) to install CUDA or CPU PyTorch, installing Python/Node dependencies, and dispatching `backend`, `frontend`, `b`, or `cmd` modes."
+              },
+              {
+                "path": "package.json",
+                "description": "Defines **Node.js dependencies** (Vue 3, Pinia, Vue Router, `@vue-flow/*`, `socket.io-client`, Vite) and top-level npm scripts (`backend`, `frontend`, `start` via `concurrently`, and `build`)."
+              },
+              {
+                "path": "requirements.txt",
+                "description": "Specifies **backend Python dependencies**, spanning FastAPI, Uvicorn, `python-socketio`, `ruamel.yaml`, `faiss-cpu`, `rank-bm25`, `openai`, `transformers`, `spacy`, and `omnivoice`."
+              }
+            ],
+            "id": 29,
+            "domain": "infrastructure",
+            "color": "#DE6808",
+            "weight": 3,
+            "layout": {
+              "x": 0,
+              "y": 62.5,
+              "w": 100,
+              "h": 37.5
+            }
+          },
+          {
+            "name": "Architecture & Developer Docs",
+            "description": "Captures **product vision, technical topology, code quirks, and phased implementation checklists** for developers and AI assistants.",
+            "files": [
+              {
+                "path": "README.md",
+                "description": "Provides **project onboarding documentation** for Loqui Studio, outlining prerequisites (`uv`, Python 3.10+, Node 18+, optional CUDA), `go.bat` usage commands, and the `backend/` vs `frontend/` directory layout."
+              },
+              {
+                "path": "concept.md",
+                "description": "Articulates the **product vision, user flows, and functional constraints**, contrasting instruction-driven persona autonomy against encyclopedia bots and detailing Museum/Experience vs Dev/Creator modes."
+              },
+              {
+                "path": "architecture.md",
+                "description": "Documents the **system topology, communication protocols, and data schemas** (`info.json`, `prompts.yaml`, `layout.json`, RAG metadata), including end-to-end sequence traces for the unified pipeline."
+              },
+              {
+                "path": "llm.md",
+                "description": "Records **non-obvious code quirks and workarounds** for language model assistants, such as `torch.compile` avoidance on Windows, `LiteralDumper` YAML block formatting, and hot-mic capture strategies."
+              },
+              {
+                "path": "todo.md",
+                "description": "Tracks the **completed 5-phase implementation plan** for reactive flows, dynamic tool-calling intent dispatch, bridge nodes, graph topology validation, and debug telemetry checkpoints."
+              }
+            ],
+            "id": 30,
+            "domain": "infrastructure",
+            "color": "#DE6808",
+            "weight": 5,
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 62.5
+            }
+          }
+        ],
+        "id": 28,
+        "color": "#DE6808",
+        "files": [],
+        "weight": 9,
+        "layout": {
+          "x": 54.761904761904766,
+          "y": 71.16704805491992,
+          "w": 45.238095238095234,
+          "h": 28.83295194508009
+        }
+      }
+    ],
+    "id": 1,
+    "domain": "default",
+    "color": "#4B5563",
+    "files": [],
+    "weight": 70
+  },
+  "file_hashes": {
+    "go.bat": "30b9b97aa227d072866d6a250c1a3cd5399d80fe",
+    "README.md": "3e1d16aedb75fdf1b77ede3164917f5495e1dc38",
+    "llm.md": "df863e6d53988b44cbd50271ab7764fab807b5e1",
+    "concept.md": "9ae42e66ae093f6cc57bc12ea9a084d78534d389",
+    "architecture.md": "9b5dd60e23900d677b7c4e7460e3947cd437ac6b",
+    "requirements.txt": "706b5d11bbafc16b6b66684aedd92b9cc5186d35",
+    "backend/config.json": "f1186d49977eec6de72f71965aa90b6c97624f02",
+    "backend/main.py": "218d50c2c8cab18cdceacba44958596dd8fc3f75",
+    "frontend/vite.config.mjs": "f3551e31d77ce4361d9e33297b867a94b046240e",
+    "frontend/jsconfig.json": "0b91a462a9945c5efe84bc226649ab0501cf567f",
+    "frontend/index.html": "3ccf2ba3749d796faf6d4d7160140e8960fa5fb7",
+    "frontend/src/main.js": "adfb22d1e8bc9c49e7463eb64fa5cffe7f9d58da",
+    "frontend/src/App.vue": "7210b6cef57efd986fde5dbcb52cf697755a9670",
+    "package.json": "31ca065eb9fc9ea2b90921bc65d52835af983188",
+    "backend/scripts/api/character.py": "d4b552d06c99e47f0efb45c607b49bd19584dfca",
+    "backend/scripts/services/llm_service.py": "e4882dba14bd411bdd6719b6830c3cc1e2cffe11",
+    "backend/scripts/services/rag_service.py": "b5367e491a4c89daaff653e65c84d83cc832beb5",
+    "backend/scripts/core/chatsession.py": "3251b9a5540770d3f31370369961322f29dacbde",
+    "backend/scripts/core/orchestrator.py": "014a9dd83d717b56163693e4fab1e4c4493e3160",
+    "backend/scripts/test_orchestration.py": "62a722553dd60b3aa28bc596f436a3334481c850",
+    "backend/scripts/core/context.py": "807ed99fe78458dfb8ed1aa26b6ee2865b010f56",
+    "backend/scripts/services/transcription_service.py": "c6cfd6cc1db1e98150c942bc813f291207469115",
+    "backend/scripts/services/tts_service.py": "8a277b3dff227cac603cb82e828b2f6385cfd0a0",
+    "backend/scripts/test_draft_endpoint.py": "1a4645b49c9ae1871b8f5f230d6e935356e58fa3",
+    "backend/scripts/core/session_manager.py": "98d805258e84d48cec43b86e9b907d4c7242955d",
+    "backend/scripts/db/__init__.py": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+    "backend/scripts/db/conversation_repo.py": "f84f27ec624ae3790b13e35adc1116f2966e41fd",
+    "backend/scripts/db/database.py": "d497e6ccec28fcc520bb89fb5580f2bfbbd37a03",
+    "backend/scripts/services/ollama_service.py": "87632f8fbac38358f6a2d8d5dfca129ae9f3df12",
+    "backend/scripts/utils/logger.py": "1edf17e8ecb1fb9f3febe497e30b512e9547688c",
+    "backend/scripts/api/conversation.py": "61fbc18a1c045d9063a99174f0cad6a5b31ba141",
+    "todo.md": "bda4f5388d1fb65734d564e6cc96e0f15e8be179",
+    "frontend/src/views/CharacterEditorView.vue": "5a3e0e6cbceeb06d49ee7adfa4ed64edb9c73df1",
+    "frontend/src/views/CharacterNewView.vue": "39ddb776ef065d59bfd6ebc15ccd79421f302a77",
+    "frontend/src/views/CharactersView.vue": "51a120a828132495bc3779d09a096ed2c8349e51",
+    "frontend/src/views/ChatView.vue": "7772ce39af52261f65db113cbb6ba785f22bef2b",
+    "frontend/src/views/HomeView.vue": "511a16aa7123bdbac9382a6a62f8011ef6a90c69",
+    "frontend/src/utils/chatHistory.js": "4699055019411776519381d0457d71bca229d51f",
+    "frontend/src/stores/navbar.js": "4707aa8cb0428a068625a76055d0d123e51bdf1c",
+    "frontend/src/router/index.js": "85d204643d9a05c2bff2dc56898fd9e7bc4e69df",
+    "frontend/src/components/ValidationBlock.vue": "17f9699602dc4c4766b4d7cda5f1a5c72faea664",
+    "frontend/src/components/TestChatPanel.vue": "0abf7268c4bd23c817585c90968dfc62056ef3b7",
+    "frontend/src/components/GraphEditor.vue": "dd53fcaf5bdf5531346f653a71ab215bc33f7872",
+    "frontend/src/components/CharacterCard.vue": "10e70ca82cf3c835709120c334d68bbd8c1d01ac",
+    "frontend/src/components/AppNavbar.vue": "9ca3fc746415033c1ec9c4a11ba62faf8f41de58",
+    "backend/scripts/test_rag.py": "a08365b7bc4f3ffdb2ed30e6d4489294f72b7675",
+    "backend/scripts/tests/test_phase1_schemas.py": "fcdc6c94ccc2476e5566dcf19ef03bf7ad9bd1b3",
+    "backend/scripts/core/intent_dispatcher.py": "2c40491c8287c6d07049d168020f5bf96a55b82a",
+    "backend/scripts/tests/test_phase2_dispatcher.py": "08c8b1dccb1672dd099e591491da2c94491131fb",
+    "backend/scripts/core/validation.py": "35954721835f6db36e19acff85bc47aa128df265",
+    "backend/scripts/tests/test_phase4_validation.py": "ee2580ebcf529371a3b2b353cec5447c7d22e2f2",
+    "backend/scripts/tests/test_phase5_e2e_bnb.py": "e3e6d954f89486ae1192fbc264e1d12f837e0b63",
+    "backend/assets/characters/henk_de_bredanaar/info.json": "fa988a8d8b983a56464cfdfde74c87070b11dd24",
+    "backend/assets/characters/henk_de_bredanaar/layout.json": "4c95c23cf0564081b62f7248e91e7a3ebfd4ab76",
+    "backend/assets/characters/henk_de_bredanaar/prompts.yaml": "e7931556a12a6018721ce4910e2cb50b581909f5",
+    "backend/scripts/test_intent_jev.py": "8af49f69eddab73696cef06419e5d475dca65894",
+    "backend/scripts/test_tts.py": "8c458df42b565db4678713c7e72cf25df58e588e",
+    "frontend/src/components/MetadataFilterEditor.vue": "84ea9e565253e9084c927eedbae8c9d578e25ebe"
+  }
+}

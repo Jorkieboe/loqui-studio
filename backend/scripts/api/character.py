@@ -4,12 +4,8 @@ import shutil
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from fastapi.responses import FileResponse, JSONResponse
 from ruamel.yaml import YAML
-
-# Define assets directories relative to backend root
-BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-ASSETS_DIR = os.path.join(BACKEND_DIR, "assets")
-CHARACTERS_DIR = os.path.join(ASSETS_DIR, "characters")
-RAG_SCHEMES_DIR = os.path.join(ASSETS_DIR, "rag_schemes")
+from scripts.utils.config import BACKEND_DIR, ASSETS_DIR, CHARACTERS_DIR, RAG_SCHEMES_DIR
+from scripts.utils.helpers import is_empty_pov, extract_chunk_id_and_text
 
 router = APIRouter()
 
@@ -125,6 +121,16 @@ var_prompt:
 
 init_assets()
 
+@router.get("/rag-schemes")
+async def list_rag_schemes():
+    from scripts.services.rag_service import get_available_rag_schemes
+    return {"schemes": get_available_rag_schemes()}
+
+@router.get("/rag-schemes/{scheme_id}/metadata")
+async def get_rag_scheme_metadata(scheme_id: str):
+    from scripts.services.rag_service import get_scheme_metadata_catalog
+    return get_scheme_metadata_catalog(scheme_id)
+
 @router.get("")
 async def list_characters():
     characters = []
@@ -145,12 +151,7 @@ async def list_characters():
                     pass
     return characters
 
-@router.get("/item/{char_id}")
-async def get_character(char_id: str):
-    char_dir = os.path.join(CHARACTERS_DIR, char_id)
-    if not os.path.exists(char_dir):
-        raise HTTPException(status_code=404, detail="Character not found")
-
+def _read_character_config(char_dir: str, wrap_http_errors: bool = False) -> dict:
     info_file = os.path.join(char_dir, "info.json")
     prompts_file = os.path.join(char_dir, "prompts.yaml")
     layout_file = os.path.join(char_dir, "layout.json")
@@ -164,7 +165,9 @@ async def get_character(char_id: str):
             with open(info_file, "r", encoding="utf-8") as f:
                 info_data = json.load(f)
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to read info.json: {str(e)}")
+            if wrap_http_errors:
+                raise HTTPException(status_code=500, detail=f"Failed to read info.json: {str(e)}")
+            raise
 
     if os.path.exists(prompts_file):
         try:
@@ -172,20 +175,31 @@ async def get_character(char_id: str):
             with open(prompts_file, "r", encoding="utf-8") as f:
                 prompts_data = yaml.load(f)
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to parse prompts.yaml: {str(e)}")
+            if wrap_http_errors:
+                raise HTTPException(status_code=500, detail=f"Failed to parse prompts.yaml: {str(e)}")
+            raise
 
     if os.path.exists(layout_file):
         try:
             with open(layout_file, "r", encoding="utf-8") as f:
                 layout_data = json.load(f)
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to read layout.json: {str(e)}")
+            if wrap_http_errors:
+                raise HTTPException(status_code=500, detail=f"Failed to read layout.json: {str(e)}")
+            raise
 
     return {
         "info": info_data,
         "prompts": prompts_data,
         "layout": layout_data
     }
+
+@router.get("/item/{char_id}")
+async def get_character(char_id: str):
+    char_dir = os.path.join(CHARACTERS_DIR, char_id)
+    if not os.path.exists(char_dir):
+        raise HTTPException(status_code=404, detail="Character not found")
+    return _read_character_config(char_dir, wrap_http_errors=True)
 
 @router.post("/item/{char_id}")
 async def save_character(char_id: str, payload: dict):
@@ -263,33 +277,7 @@ def load_character_config_sync(char_id: str) -> dict:
     char_dir = os.path.join(CHARACTERS_DIR, char_id)
     if not os.path.exists(char_dir):
         raise ValueError(f"Character '{char_id}' not found")
-
-    info_file = os.path.join(char_dir, "info.json")
-    prompts_file = os.path.join(char_dir, "prompts.yaml")
-    layout_file = os.path.join(char_dir, "layout.json")
-
-    info_data = {}
-    prompts_data = {}
-    layout_data = {}
-
-    if os.path.exists(info_file):
-        with open(info_file, "r", encoding="utf-8") as f:
-            info_data = json.load(f)
-
-    if os.path.exists(prompts_file):
-        yaml = get_yaml_parser()
-        with open(prompts_file, "r", encoding="utf-8") as f:
-            prompts_data = yaml.load(f)
-
-    if os.path.exists(layout_file):
-        with open(layout_file, "r", encoding="utf-8") as f:
-            layout_data = json.load(f)
-
-    return {
-        "info": info_data,
-        "prompts": prompts_data,
-        "layout": layout_data
-    }
+    return _read_character_config(char_dir, wrap_http_errors=False)
 
 @router.post("/test-draft")
 async def test_draft(payload: dict):
@@ -355,31 +343,20 @@ async def test_draft(payload: dict):
         char_name = info.get("name") or info.get("id") or "character"
         rag_settings = info.get("rag", {})
         pov_val = rag_settings.get("pov")
-        if pov_val is None or str(pov_val).strip().lower() in ["none", "null", ""]:
+        if is_empty_pov(pov_val):
             pov_val = None
 
         chunks_formatted = []
         for rc in pipeline_result.get("retrieved_chunks", []):
-            if isinstance(rc, dict):
-                chunks_formatted.append({
-                    "id": rc.get("chunk_id") or rc.get("id") or "",
-                    "text": rc.get("text_content") or rc.get("text") or ""
-                })
-            else:
-                chunks_formatted.append({
-                    "id": "",
-                    "text": str(rc)
-                })
+            cid, ctext = extract_chunk_id_and_text(rc)
+            chunks_formatted.append({"id": cid, "text": ctext})
 
         step_val = pipeline_result.get("active_step") or active_node_id or "start"
         step_name = pipeline_result.get("active_step_name")
         if not step_name or step_name == step_val:
             var_nodes = prompts.get("var_prompt", [])
             matched = next((n for n in var_nodes if n.get("id") == step_val), None)
-            if matched:
-                step_name = matched.get("displayName") or matched.get("label") or step_val
-        if not step_name:
-            step_name = step_val
+            step_name = (matched.get("displayName") or matched.get("label") or step_val) if matched else step_val
 
         debug_payload = {
             "character": char_name,
@@ -393,6 +370,7 @@ async def test_draft(payload: dict):
             "dynamic_tools": pipeline_result.get("dynamic_tools", []),
             "rag_scheme": pipeline_result.get("rag_scheme"),
             "rag_ext_info": pipeline_result.get("rag_ext_info", "disabled"),
+            "rag_filters": pipeline_result.get("rag_filters", {}),
             "rag_search_query": pipeline_result.get("rag_search_query", ""),
             "system_prompt": pipeline_result.get("system_prompt", ""),
             "user_payload": pipeline_result.get("user_payload", "")

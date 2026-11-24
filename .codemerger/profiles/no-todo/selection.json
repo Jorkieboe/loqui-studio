@@ -142,5 +142,11 @@
   },
   {
     "path": "backend/scripts/db/__init__.py"
+  },
+  {
+    "path": "backend/scripts/utils/config.py"
+  },
+  {
+    "path": "backend/scripts/utils/helpers.py"
   }
 ]

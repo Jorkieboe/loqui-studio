@@ -169,5 +169,8 @@
   },
   {
     "path": "backend/scripts/test_tts.py"
+  },
+  {
+    "path": "frontend/src/components/MetadataFilterEditor.vue"
   }
 ]
