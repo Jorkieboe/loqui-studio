@@ -2,7 +2,9 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { io } from 'socket.io-client'
-import { getSessions, createSession, getSession, appendMessage, updateNode } from '../utils/chatHistory'
+import { getSessions, createSession, getSession, appendMessage, updateNode, deleteSession } from '../utils/chatHistory'
+import addIcon from  '../assets/images/icons/add-icon.svg'
+import deleteIcon from  '../assets/images/icons/delete-icon.svg'
 
 const route = useRoute()
 const router = useRouter()
@@ -46,10 +48,59 @@ async function loadSession(id) {
   }
 }
 
+async function loadPendingCharacter(charId) {
+  try {
+    const res = await fetch(`/api/characters/item/${encodeURIComponent(charId)}`)
+    if (!res.ok) throw new Error(`Failed to load character (${res.status})`)
+    const data = await res.json()
+    const info = data.info || {}
+    currentSession.value = {
+      id: null,
+      character_id: info.id || charId,
+      character_name: info.name || charId,
+      character_avatar: info.avatar || null,
+    }
+    currentNodeId.value = 'start'
+  } catch (err) {
+    console.error('Failed to load character:', err)
+    currentSession.value = null
+  }
+}
+
+async function ensureSession() {
+  if (currentSession.value?.id) return currentSession.value
+  if (!currentSession.value?.character_id) return null
+  const session = await createSession(
+    currentSession.value.character_id,
+    currentSession.value.character_name,
+    currentSession.value.character_avatar || null
+  )
+  currentSession.value = session
+  await loadSessions()
+  router.replace(`/chat/${session.id}`)
+  return session
+}
+
 async function startNewChat(char) {
-  const session = await createSession(char.id, char.name, char.avatar || null)
+
+  console.log(currentSession.value.character_id)
+  const currentChar = currentSession.value
+  const session = await createSession(currentChar.character_id, currentChar.character_name, currentChar.character_avatar || null)
   await loadSessions()
   router.push(`/chat/${session.id}`)
+}
+
+async function deleteChat() {
+  const id = sessionId.value
+  if (!id) return
+  try {
+    await deleteSession(id)
+    await loadSessions()
+    router.push('/chat')
+  } catch (err) {
+    console.error('Failed to delete session:', err)
+    messages.value.push({ role: 'system', text: `Error: ${err.message || 'Failed to delete session'}` })
+  }
 }
 
 function stopAudioPlayback() {
@@ -135,22 +186,35 @@ function connectSocket() {
   })
 }
 
-function sendText() {
+async function sendText() {
   const text = inputText.value.trim()
   if (!text || isWaiting.value || !currentSession.value || !socket) return
 
-  messages.value.push({ role: 'user', text })
-  if (currentSession.value) appendMessage(currentSession.value.id, 'user', text)
-  inputText.value = ''
   isWaiting.value = true
-  scrollToBottom()
+  try {
+    const session = await ensureSession()
+    if (!session) {
+      isWaiting.value = false
+      return
+    }
+    inputText.value = ''
+    messages.value.push({ role: 'user', text })
+    await appendMessage(session.id, 'user', text)
+    await loadSessions()
+    scrollToBottom()
 
-  socket.emit('chat_message', {
-    character_id: currentSession.value.character_id,
-    text,
-    active_node_id: currentNodeId.value,
-    history: messages.value.slice(0, -1),
-  })
+    socket.emit('chat_message', {
+      character_id: session.character_id,
+      text,
+      active_node_id: currentNodeId.value,
+      history: messages.value.slice(0, -1),
+    })
+  } catch (err) {
+    console.error('Failed to send message:', err)
+    messages.value.push({ role: 'system', text: `Error: ${err.message || 'Failed to send message'}` })
+    isWaiting.value = false
+    scrollToBottom()
+  }
 }
 
 async function startRecording() {
@@ -180,14 +244,26 @@ function sendAudio() {
   if (!audioChunks.length || !socket || !currentSession.value) return
   const blob = new Blob(audioChunks, { type: 'audio/webm' })
   const reader = new FileReader()
-  reader.onload = () => {
+  reader.onload = async () => {
     isWaiting.value = true
-    socket.emit('audio_message', {
-      audio: reader.result,
-      character_id: currentSession.value.character_id,
-      active_node_id: currentNodeId.value,
-      history: messages.value,
-    })
+    try {
+      const session = await ensureSession()
+      if (!session) {
+        isWaiting.value = false
+        return
+      }
+      socket.emit('audio_message', {
+        audio: reader.result,
+        character_id: session.character_id,
+        active_node_id: currentNodeId.value,
+        history: messages.value,
+      })
+    } catch (err) {
+      console.error('Failed to send audio:', err)
+      messages.value.push({ role: 'system', text: `Error: ${err.message || 'Failed to send audio'}` })
+      isWaiting.value = false
+      scrollToBottom()
+    }
   }
   reader.readAsArrayBuffer(blob)
 }
@@ -227,19 +303,29 @@ function formatTime(ts) {
   return `${Math.floor(diffMins / 60)}h`
 }
 
-watch(() => route.params.id, async (id) => {
-  stopAudioPlayback()
-  messages.value = []
-  streamingText.value = ''
-  sessionEnded.value = false
-  currentSession.value = null
-  if (id) await loadSession(id)
-}, { immediate: true })
+watch(
+  () => [route.params.id, route.query.character],
+  async ([id, charId]) => {
+    if (id && currentSession.value?.id === id) {
+      return
+    }
+    stopAudioPlayback()
+    messages.value = []
+    streamingText.value = ''
+    sessionEnded.value = false
+    currentSession.value = null
+    if (id) {
+      await loadSession(id)
+    } else if (charId) {
+      await loadPendingCharacter(charId)
+    }
+  },
+  { immediate: true }
+)
 
 onMounted(async () => {
   await loadSessions()
   connectSocket()
-  if (sessionId.value) await loadSession(sessionId.value)
 })
 
 onBeforeUnmount(() => {
@@ -280,7 +366,7 @@ onBeforeUnmount(() => {
     <!-- MAIN CHAT -->
     <div class="chat-main">
       <div v-if="!currentSession" class="no-session">
-        <p>Select a conversation or <router-link to="/">start a new one</router-link>.</p>
+        <p>Select a conversation or <router-link to="/characters">start a new one</router-link>.</p>
       </div>
 
       <template v-else>
@@ -297,6 +383,10 @@ onBeforeUnmount(() => {
               <span class="toggle-knob"></span>
             </button>
           </div>
+
+          <div class="chat-btn" :style="{ '--icon': `url('${addIcon}')` }" @click="startNewChat"></div>
+
+          <div class="chat-btn delete" :style="{ '--icon': `url('${deleteIcon}')` }" @click="deleteChat"></div>
         </div>
 
         <div class="chat-body">
@@ -538,6 +628,38 @@ onBeforeUnmount(() => {
   font-size: 2rem;
   font-weight: 700;
   flex: 1;
+}
+
+.chat-btn {
+
+  width: 42px;
+  height: 30px;
+
+  background-color: var(--text-muted);
+  mask-image: var(--icon);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  mask-origin: content-box;
+  mask-clip: content-box;
+  mask-mode: alpha;
+  -webkit-mask-image: var(--icon);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-origin: content-box;
+  -webkit-mask-clip: content-box;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s;
+}
+
+.chat-btn:hover {
+  background-color: var(--primary);
+}
+
+.chat-btn.delete:hover {
+  background-color: #e53e3e;
 }
 
 .voice-toggle {

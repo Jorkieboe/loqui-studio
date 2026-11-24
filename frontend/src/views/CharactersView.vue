@@ -1,7 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { createSession } from '../utils/chatHistory'
 import CharacterCard from '../components/CharacterCard.vue'
 
 const router = useRouter()
@@ -14,9 +13,8 @@ async function loadCharacters() {
   } catch { /* offline */ }
 }
 
-async function goToChat(char) {
-  const session = await createSession(char.id, char.name, char.avatar || null)
-  router.push(`/chat/${session.id}`)
+function goToChat(char) {
+  router.push({ path: '/chat', query: { character: char.id } })
 }
 
 function goToEditor(id) {

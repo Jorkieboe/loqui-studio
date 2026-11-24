@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import TestChatPanel from '../components/TestChatPanel.vue'
 import GraphEditor from '../components/GraphEditor.vue'
 import ValidationBlock from '../components/ValidationBlock.vue'
+import MetadataFilterEditor from '../components/MetadataFilterEditor.vue'
 import { useNavbarStore } from '../stores/navbar'
 
 const route = useRoute()
@@ -44,16 +45,41 @@ const loading = ref(true)
 const saveError = ref('')
 
 const selectedNodeId = ref(null)
+const ragMetadataFields = ref([])
+
+async function loadRagMetadata(scheme) {
+  const cleaned = (scheme || '').trim()
+  if (!cleaned) {
+    ragMetadataFields.value = []
+    return
+  }
+  try {
+    const res = await fetch(`/api/characters/rag-schemes/${encodeURIComponent(cleaned)}/metadata`)
+    if (res.ok) {
+      const data = await res.json()
+      ragMetadataFields.value = data.fields || []
+    } else {
+      ragMetadataFields.value = []
+    }
+  } catch {
+    ragMetadataFields.value = []
+  }
+}
+
+watch(() => info.value.rag?.ragScheme, (scheme) => {
+  loadRagMetadata(scheme)
+})
 
 const selectedNode = computed(() => {
   if (!selectedNodeId.value) return null
   return prompts.value.var_prompt?.find(n => n.id === selectedNodeId.value) || null
 })
 
-const isFlowNode     = computed(() => selectedNode.value?.node_class === 'flow')
-const isPromptNode   = computed(() => selectedNode.value?.node_class === 'prompt')
-const isReactiveNode = computed(() => selectedNode.value?.node_class === 'reactive')
-const isBridgeNode   = computed(() => selectedNode.value?.type === 'bridge-node')
+const isFlowNode          = computed(() => selectedNode.value?.node_class === 'flow')
+const isPromptNode        = computed(() => selectedNode.value?.node_class === 'prompt')
+const isReactiveNode      = computed(() => selectedNode.value?.node_class === 'reactive')
+const isBridgeNode        = computed(() => selectedNode.value?.type === 'bridge-node')
+const canRenameSelectedNode = computed(() => isBridgeNode.value || isReactiveNode.value || isPromptNode.value)
 
 const editingNodeTitle = ref(false)
 const nodeTitleInput = ref(null)
@@ -153,6 +179,16 @@ const NODE_DEFAULTS = {
   'reactive-standalone': { node_class: 'reactive', mode: 'standalone', displayName: 'Reactive Standalone', trigger_intent: '', goal: '', tone: '', next: [] },
 }
 
+function getConnTarget(conn) {
+  return typeof conn === 'string' ? conn : conn?.target
+}
+
+function trimEmptyLoopNext(node) {
+  while (node.next.length && !node.next[node.next.length - 1]?.target) {
+    node.next.pop()
+  }
+}
+
 function resetChat() {
   chatMessages.value     = []
   chatSessionState.value = { active_node_id: null, history: [] }
@@ -168,7 +204,7 @@ function onConnectEdge({ source, target, sourceHandle }) {
     if (idx === 1 && !node.next[0]) node.next[0] = {}
     node.next[idx] = { target }
   } else {
-    if (!node.next.find(c => (typeof c === 'string' ? c : c?.target) === target))
+    if (!node.next.find(c => getConnTarget(c) === target))
       node.next.push({ target })
   }
   layout.value.connections = [
@@ -201,12 +237,10 @@ function onDisconnectEdges(connections) {
           if (node.next[0]?.target === target) node.next[0] = {}
           if (node.next[1]?.target === target) node.next[1] = {}
         }
-        while (node.next.length && !node.next[node.next.length - 1]?.target) {
-          node.next.pop()
-        }
+        trimEmptyLoopNext(node)
       } else {
         node.next = (node.next || []).filter(c => {
-          const cTarget = typeof c === 'string' ? c : c?.target
+          const cTarget = getConnTarget(c)
           return cTarget && cTarget !== target
         })
       }
@@ -226,15 +260,13 @@ function onRemoveNodes(ids) {
   for (const node of (prompts.value.var_prompt || [])) {
     if (node.type === 'loop-node') {
       node.next = (node.next || []).map(c => {
-        const cTarget = typeof c === 'string' ? c : c?.target
+        const cTarget = getConnTarget(c)
         return (!cTarget || idSet.has(cTarget)) ? {} : c
       })
-      while (node.next.length && !node.next[node.next.length - 1]?.target) {
-        node.next.pop()
-      }
+      trimEmptyLoopNext(node)
     } else {
       node.next = (node.next || []).filter(c => {
-        const cTarget = typeof c === 'string' ? c : c?.target
+        const cTarget = getConnTarget(c)
         return cTarget && !idSet.has(cTarget)
       })
     }
@@ -391,7 +423,7 @@ const validationErrors = computed(() => {
       }
 
       for (const item of (currNode.next || [])) {
-        const target = item?.target || item
+        const target = getConnTarget(item)
         if (target && !visited.has(target)) {
           queue.push(target)
         }
@@ -416,6 +448,15 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   navbarStore.clearAction()
 })
+
+document.addEventListener("keydown", function (e) {
+// Then display the event.key
+  if(e.key === 's' && e.ctrlKey){
+    e.preventDefault()
+    navbarStore.doAction('save')
+  }
+});
+
 </script>
 
 <template>
@@ -538,10 +579,9 @@ onBeforeUnmount(() => {
 
           <div v-if="!selectedNode" class="node-hint">Click a node to edit its properties.</div>
 
-          <!-- Bridge node -->
-          <template v-else-if="isBridgeNode">
+          <template v-else>
             <div class="node-title-row">
-              <h3 v-if="!editingNodeTitle" class="node-title">{{ selectedNode.displayName }}</h3>
+              <h3 v-if="!editingNodeTitle || !canRenameSelectedNode" class="node-title">{{ selectedNode.displayName }}</h3>
               <input
                 v-else
                 ref="nodeTitleInput"
@@ -551,91 +591,98 @@ onBeforeUnmount(() => {
                 @keydown.enter="editingNodeTitle = false"
                 @keydown.escape="editingNodeTitle = false"
               />
-              <button class="node-title-edit-btn" @click="startEditTitle" title="Rename node">
+              <button v-if="canRenameSelectedNode" class="node-title-edit-btn" @click="startEditTitle" title="Rename node">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                 </svg>
               </button>
             </div>
-            <div class="field">
-              <label>Custom wrap-up directive (optional)</label>
-              <textarea v-model="selectedNode.goal" rows="4" placeholder="Leave blank to use default bridge wrap-up instruction." />
-            </div>
-            <div class="field">
-              <label>Information retrieval</label>
-              <select v-model="selectedNode.ext_info">
-                <option value="reuse">Reuse last info (default)</option>
-                <option value="fetch">Fetch fresh info</option>
-                <option value="disabled">Disabled</option>
-              </select>
-            </div>
-            <p class="field-hint">Wraps up the sub-flow, reuses external context by default, and prompts the user to return to shelved open topics.</p>
-          </template>
 
-          <!-- Flow: start / end / cycle -->
-          <template v-else-if="isFlowNode && selectedNode.type !== 'loop-node' && !isBridgeNode">
-            <div class="node-title-row">
-              <h3 class="node-title">{{ selectedNode.displayName }}</h3>
-            </div>
-            <div class="node-hint" style="margin-top:1rem">No editable properties for this node.</div>
-          </template>
+            <!-- Bridge node -->
+            <template v-if="isBridgeNode">
+              <div class="field">
+                <label>Custom wrap-up directive (optional)</label>
+                <textarea v-model="selectedNode.goal" rows="4" placeholder="Leave blank to use default bridge wrap-up instruction." />
+              </div>
+              <div class="field">
+                <label>Information retrieval</label>
+                <select v-model="selectedNode.ext_info">
+                  <option value="reuse">Reuse last info (default)</option>
+                  <option value="fetch">Fetch fresh info</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </div>
+              <p class="field-hint">Wraps up the sub-flow, reuses external context by default, and prompts the user to return to shelved open topics.</p>
+            </template>
 
-          <!-- Flow: loop -->
-          <template v-else-if="selectedNode.type === 'loop-node'">
-            <div class="node-title-row">
-              <h3 class="node-title">{{ selectedNode.displayName }}</h3>
-            </div>
-            <div class="field">
-              <label>Loop count</label>
-              <input type="number" min="1" v-model.number="selectedNode.loop_count" />
-            </div>
-            <p class="field-hint">Number of times the loop runs before exiting via the Exit handle.</p>
-          </template>
-
-          <!-- Reactive nodes: flow / standalone -->
-          <template v-else-if="isReactiveNode">
-            <div class="node-title-row">
-              <h3 v-if="!editingNodeTitle" class="node-title">{{ selectedNode.displayName }}</h3>
-              <input
-                v-else
-                ref="nodeTitleInput"
-                class="node-title-input"
-                v-model="selectedNode.displayName"
-                @blur="editingNodeTitle = false"
-                @keydown.enter="editingNodeTitle = false"
-                @keydown.escape="editingNodeTitle = false"
+            <!-- Flow: start / end / cycle -->
+            <template v-else-if="isFlowNode && selectedNode.type !== 'loop-node'">
+              <MetadataFilterEditor
+                v-if="selectedNode.type === 'start-node'"
+                v-model="selectedNode.rag_filters"
+                :fields="ragMetadataFields"
+                :rag-scheme="info.rag?.ragScheme || ''"
+                title="Main flow RAG metadata filter"
               />
-              <button class="node-title-edit-btn" @click="startEditTitle" title="Rename node">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-              </button>
-            </div>
+              <div v-else class="node-hint" style="margin-top:1rem">No editable properties for this node.</div>
+            </template>
 
-            <div class="field">
-              <label>Mode</label>
-              <select v-model="selectedNode.mode">
-                <option value="flow">Flow</option>
-                <option value="standalone">Standalone</option>
-              </select>
-            </div>
+            <!-- Flow: loop -->
+            <template v-else-if="selectedNode.type === 'loop-node'">
+              <div class="field">
+                <label>Loop count</label>
+                <input type="number" min="1" v-model.number="selectedNode.loop_count" />
+              </div>
+              <p class="field-hint">Number of times the loop runs before exiting via the Exit handle.</p>
+            </template>
 
-            <div class="field">
-              <label>Trigger intent</label>
-              <textarea v-model="selectedNode.trigger_intent" rows="3" placeholder="Condition or user intent triggering this node..." />
-            </div>
-            <p class="field-hint">Used by the model to route to this node when the user brings up this topic.</p>
+            <!-- Reactive nodes: flow / standalone -->
+            <template v-else-if="isReactiveNode">
+              <div class="field">
+                <label>Mode</label>
+                <select v-model="selectedNode.mode">
+                  <option value="flow">Flow</option>
+                  <option value="standalone">Standalone</option>
+                </select>
+              </div>
 
-            <div class="field" v-if="selectedNode.mode === 'flow'">
-              <label>Flow label</label>
-              <input v-model="selectedNode.flow_label" type="text" placeholder="e.g. dinner & restaurants" />
-            </div>
-            <p class="field-hint" v-if="selectedNode.mode === 'flow'">Human-readable topic title used when offering to resume this shelved topic.</p>
+              <div class="field">
+                <label>Trigger intent</label>
+                <textarea v-model="selectedNode.trigger_intent" rows="3" placeholder="Condition or user intent triggering this node..." />
+              </div>
+              <p class="field-hint">Used by the model to route to this node when the user brings up this topic.</p>
 
-            <!-- Instructions only shown for standalone reactive nodes -->
-            <template v-if="selectedNode.mode === 'standalone'">
+              <div class="field" v-if="selectedNode.mode === 'flow'">
+                <label>Flow label</label>
+                <input v-model="selectedNode.flow_label" type="text" placeholder="e.g. dinner & restaurants" />
+              </div>
+              <p class="field-hint" v-if="selectedNode.mode === 'flow'">Human-readable topic title used when offering to resume this shelved topic.</p>
+
+              <MetadataFilterEditor
+                v-if="selectedNode.mode === 'flow'"
+                v-model="selectedNode.rag_filters"
+                :fields="ragMetadataFields"
+                :rag-scheme="info.rag?.ragScheme || ''"
+                title="Flow RAG metadata filter"
+              />
+
+              <!-- Instructions only shown for standalone reactive nodes -->
+              <template v-if="selectedNode.mode === 'standalone'">
+                <div class="field">
+                  <label>Instruction</label>
+                  <textarea v-model="selectedNode.goal" rows="4" />
+                </div>
+
+                <div class="field">
+                  <label>Tone</label>
+                  <input v-model="selectedNode.tone" type="text" />
+                </div>
+              </template>
+            </template>
+
+            <!-- Prompt nodes: basic / advanced / deflect / silence -->
+            <template v-else-if="isPromptNode">
               <div class="field">
                 <label>Instruction</label>
                 <textarea v-model="selectedNode.goal" rows="4" />
@@ -645,58 +692,34 @@ onBeforeUnmount(() => {
                 <label>Tone</label>
                 <input v-model="selectedNode.tone" type="text" />
               </div>
-            </template>
-          </template>
 
-          <!-- Prompt nodes: basic / advanced / deflect / silence -->
-          <template v-else-if="isPromptNode">
-            <div class="node-title-row">
-              <h3 v-if="!editingNodeTitle" class="node-title">{{ selectedNode.displayName }}</h3>
-              <input
-                v-else
-                ref="nodeTitleInput"
-                class="node-title-input"
-                v-model="selectedNode.displayName"
-                @blur="editingNodeTitle = false"
-                @keydown.enter="editingNodeTitle = false"
-                @keydown.escape="editingNodeTitle = false"
-              />
-              <button class="node-title-edit-btn" @click="startEditTitle" title="Rename node">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-              </button>
-            </div>
-
-            <div class="field">
-              <label>Instruction</label>
-              <textarea v-model="selectedNode.goal" rows="4" />
-            </div>
-
-            <div class="field">
-              <label>Tone</label>
-              <input v-model="selectedNode.tone" type="text" />
-            </div>
-
-            <div v-if="selectedNode.type !== 'basic'" class="field">
-              <label>Example</label>
-              <textarea v-model="selectedNode.example" rows="2" />
-            </div>
-
-            <template v-if="selectedNode.type === 'advanced'">
-              <div class="field">
-                <label>Follow up</label>
-                <input v-model="selectedNode.follow_up" type="text" />
+              <div v-if="selectedNode.type !== 'basic'" class="field">
+                <label>Example</label>
+                <textarea v-model="selectedNode.example" rows="2" />
               </div>
-              <div class="field">
-                <label>Information retrieval</label>
-                <select v-model="selectedNode.ext_info">
-                  <option value="disabled">Disabled</option>
-                  <option value="fetch">Fetch</option>
-                  <option value="reuse">Reuse</option>
-                </select>
-              </div>
+
+              <template v-if="selectedNode.type === 'advanced'">
+                <div class="field">
+                  <label>Follow up</label>
+                  <input v-model="selectedNode.follow_up" type="text" />
+                </div>
+                <div class="field">
+                  <label>Information retrieval</label>
+                  <select v-model="selectedNode.ext_info">
+                    <option value="disabled">Disabled</option>
+                    <option value="fetch">Fetch</option>
+                    <option value="reuse">Reuse</option>
+                  </select>
+                </div>
+                <MetadataFilterEditor
+                  v-if="selectedNode.ext_info === 'fetch'"
+                  v-model="selectedNode.rag_filters"
+                  :fields="ragMetadataFields"
+                  :rag-scheme="info.rag?.ragScheme || ''"
+                  title="Node RAG metadata filter (optional)"
+                  hint="Overrides or extends the active flow's metadata filter for this node."
+                />
+              </template>
             </template>
           </template>
         </div>

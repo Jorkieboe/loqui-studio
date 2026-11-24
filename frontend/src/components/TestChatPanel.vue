@@ -111,6 +111,7 @@ async function send() {
         dynamic_tools: data.dynamic_tools || [],
         rag_scheme: data.rag_scheme || null,
         rag_ext_info: data.rag_ext_info || 'disabled',
+        rag_filters: data.rag_filters || {},
         rag_search_query: data.rag_search_query || '',
         system_prompt: data.system_prompt || '',
         user_payload: data.user_payload || '',
@@ -235,6 +236,12 @@ function onKeydown(e) {
             <span class="debug-key">RAG Mode:</span>
             <span class="debug-val rag-mode-tag">{{ msg.debug.rag_ext_info || 'disabled' }}</span>
             <span v-if="msg.debug.rag_scheme" class="debug-id-badge">{{ msg.debug.rag_scheme }}</span>
+          </div>
+          <div v-if="msg.debug.rag_filters && Object.keys(msg.debug.rag_filters).length" class="debug-row debug-row-wrap">
+            <span class="debug-key">Metadata Filter:</span>
+            <span class="debug-val">
+              {{ Object.entries(msg.debug.rag_filters).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' | ') }}
+            </span>
           </div>
           <div v-if="msg.debug.rag_search_query" class="debug-row debug-row-wrap">
             <span class="debug-key">Search Query:</span>

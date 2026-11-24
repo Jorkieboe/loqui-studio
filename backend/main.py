@@ -1,5 +1,4 @@
 import os
-import json
 import asyncio
 import logging
 from contextlib import asynccontextmanager
@@ -20,6 +19,7 @@ from scripts.services.transcription_service import transcribe_audio, load_whispe
 from scripts.services.tts_service import synthesize_tts_wav, load_tts_async, is_tts_enabled
 from scripts.core.orchestrator import run_dialogue_pipeline
 from scripts.core.session_manager import SessionManager
+from scripts.utils.config import CONFIG_PATH, load_config
 from scripts.utils.logger import PipelineLogger
 
 session_manager = SessionManager()
@@ -52,14 +52,11 @@ app.include_router(conversation_router, prefix="/api/conversations")
 
 init_db()
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
-
 @app.get("/api/config")
 async def get_config():
     if os.path.exists(CONFIG_PATH):
         try:
-            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
+            return load_config()
         except Exception as e:
             return {"error": f"Failed to parse config: {str(e)}"}
     return {"error": "Configuration file not found"}
@@ -144,12 +141,15 @@ async def process_dialogue_turn(
         if tts_audio_bytes:
             await sio.emit("audio_response", {"audio": tts_audio_bytes, "mime_type": "audio/wav"}, to=sid)
 
+    await _emit_response_complete(sid, chatsession, pipeline_result["retrieved_chunks"])
+
+async def _emit_response_complete(sid: str, chatsession, retrieved_chunks: list):
     session_ended = chatsession.current_node_id in ["end", "end-node"]
     await sio.emit("response_complete", {
         "next_node_id": chatsession.current_node_id,
         "possible_next_nodes": chatsession.possible_next_nodes,
         "session_ended": session_ended,
-        "retrieved_chunks": pipeline_result["retrieved_chunks"]
+        "retrieved_chunks": retrieved_chunks
     }, to=sid)
 
 @sio.event
@@ -215,13 +215,7 @@ async def audio_message(sid, data):
         await sio.emit("transcription", {"text": transcription}, to=sid)
 
         if not transcription.strip():
-            session_ended = chatsession.current_node_id in ["end", "end-node"]
-            await sio.emit("response_complete", {
-                "next_node_id": chatsession.current_node_id,
-                "possible_next_nodes": chatsession.possible_next_nodes,
-                "session_ended": session_ended,
-                "retrieved_chunks": []
-            }, to=sid)
+            await _emit_response_complete(sid, chatsession, [])
             return
 
         await process_dialogue_turn(

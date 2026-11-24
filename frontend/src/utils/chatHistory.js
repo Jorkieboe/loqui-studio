@@ -13,6 +13,9 @@ export async function createSession(characterId, characterName, characterAvatar)
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ character_id: characterId, character_name: characterName, character_avatar: characterAvatar || null }),
   })
+  if (!res.ok) {
+    throw new Error(`Failed to create session (${res.status})`)
+  }
   return res.json()
 }
 
@@ -24,7 +27,10 @@ export async function getSession(id) {
 }
 
 export async function deleteSession(id) {
-  await fetch(`${API}/${id}`, { method: 'DELETE' })
+  const res = await fetch(`${API}/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    throw new Error(`Failed to delete session (${res.status})`)
+  }
 }
 
 export async function appendMessage(conversationId, role, content) {

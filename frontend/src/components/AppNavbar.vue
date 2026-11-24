@@ -4,6 +4,7 @@ import { useNavbarStore } from '../stores/navbar'
 
 const route = useRoute()
 const navbarStore = useNavbarStore()
+
 </script>
 
 <template>
@@ -29,9 +30,10 @@ const navbarStore = useNavbarStore()
       <button
         v-if="navbarStore.actionFn"
         class="nav-action-btn"
-        @click="navbarStore.actionFn()"
+        :class="{actionActive: navbarStore.actionActive}"
+        @click="navbarStore.doAction()"
       >
-        {{ navbarStore.actionLabel }}
+        {{ navbarStore.actionActive ? 'clicked' : navbarStore.actionLabel }}
       </button>
     </div>
   </nav>
@@ -85,10 +87,21 @@ const navbarStore = useNavbarStore()
   border-radius: var(--radius);
   font-size: 0.9rem;
   font-weight: 500;
-  transition: background 0.15s;
+  /* transition: background 0.15s; */
 }
 
+
+
 .nav-action-btn:hover {
+  background: #f0f0f0;
+}
+
+.nav-action-btn.actionActive{
+  background-color: darkgreen;
+  color: white;
+}
+
+.nav-action-btn:active {
   background: #f0f0f0;
 }
 </style>
