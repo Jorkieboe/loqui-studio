@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
   modelValue: { type: Object, default: () => ({}) },
@@ -25,6 +25,40 @@ const mergedFields = computed(() => {
   }
   return Array.from(byKey.values())
 })
+
+const fieldFoldStates = ref([])
+
+watch(
+  mergedFields,
+  (fields) => {
+    const prevByName = new Map(fieldFoldStates.value.map(item => [item.name, item.expanded]))
+    fieldFoldStates.value = fields.map(field => ({
+      name: field.key,
+      expanded: prevByName.get(field.key) ?? false,
+    }))
+  },
+  { immediate: true }
+)
+
+function isExpanded(key) {
+  return fieldFoldStates.value.find(item => item.name === key)?.expanded ?? false
+}
+
+function toggleFold(key) {
+  const entry = fieldFoldStates.value.find(item => item.name === key)
+  if (entry) {
+    entry.expanded = !entry.expanded
+  } else {
+    fieldFoldStates.value.push({ name: key, expanded: true })
+  }
+}
+
+function getVisibleValues(field) {
+  if (isExpanded(field.key)) {
+    return field.values
+  }
+  return field.values.filter(val => isValueActive(field.key, val))
+}
 
 function getSelectedList(key) {
   const val = props.modelValue?.[key]
@@ -80,10 +114,17 @@ function onInput(key, rawValue) {
     </p>
     <div v-else class="meta-fields-list">
       <div v-for="field in mergedFields" :key="field.key" class="meta-field-item">
-        <label class="meta-field-key">{{ field.key }}</label>
-        <div v-if="field.values.length" class="meta-chips">
+        <button
+          type="button"
+          class="meta-field-header"
+          @click="toggleFold(field.key)"
+        >
+          <span class="meta-field-key">{{ field.key }}</span>
+          <span class="meta-field-arrow">{{ isExpanded(field.key) ? '▾' : '▸' }}</span>
+        </button>
+        <div v-if="getVisibleValues(field).length" class="meta-chips">
           <button
-            v-for="val in field.values"
+            v-for="val in getVisibleValues(field)"
             :key="val"
             type="button"
             class="meta-chip"
@@ -93,13 +134,6 @@ function onInput(key, rawValue) {
             {{ val }}
           </button>
         </div>
-        <input
-          type="text"
-          class="meta-input"
-          :value="getSelectedText(field.key)"
-          placeholder="Expected values (comma-separated, or leave empty)"
-          @input="onInput(field.key, $event.target.value)"
-        />
       </div>
     </div>
     <p v-if="ragScheme && mergedFields.length" class="meta-filter-hint">{{ hint }}</p>
@@ -138,11 +172,34 @@ function onInput(key, rawValue) {
   gap: 0.3rem;
 }
 
+.meta-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  padding: 0.15rem 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.meta-field-header:hover .meta-field-key,
+.meta-field-header:hover .meta-field-arrow {
+  color: var(--text);
+}
+
 .meta-field-key {
   font-size: 0.76rem;
   font-weight: 600;
   color: var(--text-muted);
   font-family: monospace;
+  transition: color 0.15s;
+}
+
+.meta-field-arrow {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  transition: color 0.15s;
 }
 
 .meta-chips {
