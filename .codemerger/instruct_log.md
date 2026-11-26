@@ -366,3 +366,9 @@ I want to make the chatbtn in chatview change in color. What i want to side is r
 
 ---
 
+## [2026-11-26 11:26:57] • Instruct Input
+
+In characterEditorView, there are no longer two testchatpanel. But that means that we can also move message and session-state to the child. as that;'s only live in that one component
+
+---
+

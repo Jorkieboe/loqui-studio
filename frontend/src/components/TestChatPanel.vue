@@ -1,12 +1,19 @@
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, watch } from 'vue'
 
 const props = defineProps({
   draftConfig: { type: Object, default: null },
 })
 
-const messages     = defineModel('messages',     { default: () => [] })
-const sessionState = defineModel('sessionState', { default: () => ({ active_node_id: null, active_flow_id: 'main', open_topics: [], history: [], last_retrieved_chunks: [] }) })
+const emit = defineEmits(['activeNodeChange'])
+
+const messages     = ref([])
+const sessionState = ref({ active_node_id: null, active_flow_id: 'main', open_topics: [], history: [], last_retrieved_chunks: [] })
+
+watch(
+  () => sessionState.value.active_node_id,
+  (nodeId) => emit('activeNodeChange', nodeId)
+)
 
 const input   = ref('')
 const loading = ref(false)
@@ -166,6 +173,8 @@ function onKeydown(e) {
     send()
   }
 }
+
+defineExpose({ resetChat })
 </script>
 
 <template>

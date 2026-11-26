@@ -1,5 +1,8 @@
 {
   "unknown_files": [
+    "backend/assets/characters/henk_de_bredanaar/info.json",
+    "backend/assets/characters/henk_de_bredanaar/layout.json",
+    "backend/assets/characters/henk_de_bredanaar/prompts.yaml",
     "backend/scripts/utils/config.py",
     "backend/scripts/utils/helpers.py"
   ]

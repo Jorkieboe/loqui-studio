@@ -14,8 +14,8 @@ const navbarStore = useNavbarStore()
 const charId = computed(() => route.params.id)
 const activeTab = ref('base')
 
-const chatMessages     = ref([])
-const chatSessionState = ref({ active_node_id: null, history: [] })
+const activeNodeId = ref(null)
+const testChatRef  = ref(null)
 
 const info = ref({
   id: '',
@@ -190,8 +190,7 @@ function trimEmptyLoopNext(node) {
 }
 
 function resetChat() {
-  chatMessages.value     = []
-  chatSessionState.value = { active_node_id: null, history: [] }
+  testChatRef.value?.resetChat()
 }
 
 function onConnectEdge({ source, target, sourceHandle }) {
@@ -724,7 +723,7 @@ document.addEventListener("keydown", function (e) {
           <GraphEditor
             :layout-data="layout"
             :var-prompt="prompts.var_prompt || []"
-            :active-node-id="chatSessionState.active_node_id"
+            :active-node-id="activeNodeId"
             @nodeSelected="onNodeSelected"
             @addNode="onAddNode"
             @connectEdge="onConnectEdge"
@@ -737,7 +736,7 @@ document.addEventListener("keydown", function (e) {
 
       <div class="chat-col">
         <ValidationBlock v-show="!isValid" :errors="validationErrors" />
-        <TestChatPanel v-show="isValid" :draft-config="draftConfig" v-model:messages="chatMessages" v-model:session-state="chatSessionState" />
+        <TestChatPanel ref="testChatRef" v-show="isValid" :draft-config="draftConfig" @activeNodeChange="activeNodeId = $event" />
       </div>
       </div>
     </div>
