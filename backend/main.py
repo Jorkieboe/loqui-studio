@@ -19,7 +19,8 @@ from scripts.services.transcription_service import transcribe_audio, load_whispe
 from scripts.services.tts_service import synthesize_tts_wav, load_tts_async, is_tts_enabled
 from scripts.core.orchestrator import run_dialogue_pipeline
 from scripts.core.session_manager import SessionManager
-from scripts.utils.config import CONFIG_PATH, load_config
+from scripts.services.llm_service import LLMServiceError
+from scripts.utils.config import CONFIG_PATH, load_config, format_error_for_client
 from scripts.utils.logger import PipelineLogger
 
 session_manager = SessionManager()
@@ -113,6 +114,9 @@ async def process_dialogue_turn(
         session_instance=chatsession
     )
 
+    for rag_err in pipeline_result.get("rag_errors", []):
+        await sio.emit("warning", {"detail": rag_err}, to=sid)
+
     chatsession.active_loop_id = loop_state.get("active_loop_id")
     chatsession.next_node_id = pipeline_result["next_node_id"]
     chatsession.possible_next_nodes = pipeline_result["possible_next_nodes"]
@@ -173,9 +177,22 @@ async def chat_message(sid, data):
             active_node_id=data.get("active_node_id"),
             history=data.get("history", []),
         )
+    except LLMServiceError as e:
+        PipelineLogger.error("LLM error in chat_message socket event", e)
+        await sio.emit("error", {
+            "detail": format_error_for_client(
+                f"LLM error: {e}",
+                "The AI response generator is not working right now. Please contact the developer."
+            )
+        }, to=sid)
     except Exception as e:
         PipelineLogger.error("Error in chat_message socket event", e)
-        await sio.emit("error", {"detail": str(e)}, to=sid)
+        await sio.emit("error", {
+            "detail": format_error_for_client(
+                str(e),
+                "Something went wrong while processing your message. Please contact the developer."
+            )
+        }, to=sid)
 
 @sio.event
 async def audio_message(sid, data):
@@ -227,9 +244,22 @@ async def audio_message(sid, data):
             history=history,
             char_config=char_config,
         )
+    except LLMServiceError as e:
+        PipelineLogger.error("LLM error in audio_message socket event", e)
+        await sio.emit("error", {
+            "detail": format_error_for_client(
+                f"LLM error: {e}",
+                "The AI response generator is not working right now. Please contact the developer."
+            )
+        }, to=sid)
     except Exception as e:
         PipelineLogger.error("Error in audio_message socket event", e)
-        await sio.emit("error", {"detail": str(e)}, to=sid)
+        await sio.emit("error", {
+            "detail": format_error_for_client(
+                str(e),
+                "Something went wrong while processing your message. Please contact the developer."
+            )
+        }, to=sid)
 
 # Mount Vue production build files if they exist
 dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../frontend/dist"))

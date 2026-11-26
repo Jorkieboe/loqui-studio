@@ -1,15 +1,14 @@
 import os
 import sys
 import asyncio
-from dotenv import load_dotenv
 
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BACKEND_DIR)
 
+from scripts.utils.config import load_project_env
+
 # Load environment variables from standard locations
-load_dotenv()
-load_dotenv(os.path.join(BACKEND_DIR, "..", ".env"))
-load_dotenv(os.path.join(BACKEND_DIR, ".env"))
+load_project_env()
 
 from scripts.api.character import get_character
 from scripts.core.orchestrator import run_dialogue_pipeline
