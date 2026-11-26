@@ -4,7 +4,8 @@ import shutil
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from fastapi.responses import FileResponse, JSONResponse
 from ruamel.yaml import YAML
-from scripts.utils.config import BACKEND_DIR, ASSETS_DIR, CHARACTERS_DIR, RAG_SCHEMES_DIR
+from scripts.services.llm_service import LLMServiceError
+from scripts.utils.config import BACKEND_DIR, ASSETS_DIR, CHARACTERS_DIR, RAG_SCHEMES_DIR, format_error_for_client
 from scripts.utils.helpers import is_empty_pov, extract_chunk_id_and_text
 
 router = APIRouter()
@@ -388,10 +389,25 @@ async def test_draft(payload: dict):
             "step_name": step_name,
             "pov": pov_val,
             "chunks": chunks_formatted,
+            "warnings": pipeline_result.get("rag_errors", []),
             "debug": debug_payload
         }
+    except LLMServiceError as e:
+        raise HTTPException(
+            status_code=503,
+            detail=format_error_for_client(
+                f"LLM error: {e}",
+                "The AI response generator is not working right now. Please contact the developer."
+            )
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Pipeline execution failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=format_error_for_client(
+                f"Pipeline execution failed: {str(e)}",
+                "Something went wrong while generating a response. Please contact the developer."
+            )
+        )
 
 @router.get("/test-serialization")
 async def test_serialization():

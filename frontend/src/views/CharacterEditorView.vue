@@ -568,8 +568,8 @@ document.addEventListener("keydown", function (e) {
         </div>
 
         <div class="chat-col">
-          <ValidationBlock v-if="!isValid" :errors="validationErrors" />
-          <TestChatPanel v-else :draft-config="draftConfig" v-model:messages="chatMessages" v-model:session-state="chatSessionState" />
+          <ValidationBlock v-show="!isValid" :errors="validationErrors" />
+          <TestChatPanel v-show="isValid" :draft-config="draftConfig" v-model:messages="chatMessages" v-model:session-state="chatSessionState" />
         </div>
       </div>
 

@@ -7,29 +7,17 @@ from rank_bm25 import BM25Okapi
 from scripts.utils.config import RAG_SCHEMES_DIR
 from scripts.utils.helpers import is_empty_pov, iter_history_turns
 from scripts.utils.logger import PipelineLogger
-from scripts.services.llm_service import api_request
+from spacy.lang.en.stop_words import STOP_WORDS as EN_STOP_WORDS
+from spacy.lang.nl.stop_words import STOP_WORDS as NL_STOP_WORDS
+from scripts.services.llm_service import api_request, LLMServiceError
 from scripts.services.ollama_service import is_ollama_available, load_ollama_config
 
 logger = logging.getLogger(__name__)
 
-# [MODIFIED] Retrieve combined English and Dutch stop words from spaCy
-try:
-    from spacy.lang.en.stop_words import STOP_WORDS as EN_STOP_WORDS
-    from spacy.lang.nl.stop_words import STOP_WORDS as NL_STOP_WORDS
-    SPACY_STOP_WORDS = EN_STOP_WORDS.union(NL_STOP_WORDS)
-except ImportError:
-    # Safe static fallback in case dependencies are loading
-    SPACY_STOP_WORDS = {
-        "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "as", "at",
-        "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can", "did", "do",
-        "for", "from", "further", "had", "has", "have", "having", "he", "her", "here", "hers", "him", "his", "how",
-        "i", "if", "in", "into", "is", "it", "its", "me", "more", "most", "my", "myself", "no", "nor", "not", "of",
-        "on", "once", "only", "or", "other", "our", "ours", "out", "over", "own", "same", "she", "should", "so",
-        "some", "such", "than", "that", "the", "their", "theirs", "them", "then", "there", "these", "they", "this",
-        "those", "through", "to", "too", "under", "until", "up", "very", "was", "we", "were", "what", "when", "where",
-        "which", "while", "who", "whom", "why", "with", "you", "your", "yours", "yourself", "yourselves",
-        "de", "het", "een", "en", "van", "ik", "je", "hij", "we", "ze", "te", "in", "op", "met", "voor", "aan", "om"
-    }
+class RAGServiceError(RuntimeError):
+    pass
+
+SPACY_STOP_WORDS = EN_STOP_WORDS.union(NL_STOP_WORDS)
 
 def remove_stop_words(text: str) -> List[str]:
     cleaned = text.lower().replace("?", "").replace(".", "").replace(",", "").replace("!", "")
@@ -38,43 +26,6 @@ def remove_stop_words(text: str) -> List[str]:
 
 def init_rag_schemes():
     os.makedirs(RAG_SCHEMES_DIR, exist_ok=True)
-    hussite_dir = os.path.join(RAG_SCHEMES_DIR, "hussite_wars")
-    if not os.path.exists(hussite_dir):
-        os.makedirs(hussite_dir, exist_ok=True)
-        hussite_data = [
-            {
-                "id": "chunk_01",
-                "text": "At the Battle of Sudoměř in 1420, Jan Žižka deployed wagon forts to decisively defeat royalist cavalry forces.",
-                "pov": ["hussite_commander", "peasant_soldier", "all"],
-                "metadata": {
-                    "locations": ["Sudoměř"],
-                    "tactics": ["wagon fort"],
-                    "dates": ["1420"]
-                }
-            },
-            {
-                "id": "chunk_02",
-                "text": "The wagon fort (vozová hradba) was an armored mobile wall consisting of standard peasant carts chained together to defend infantry.",
-                "pov": ["hussite_commander", "all"],
-                "metadata": {
-                    "locations": ["Bohemia"],
-                    "tactics": ["wagon fort"],
-                    "dates": []
-                }
-            },
-            {
-                "id": "chunk_03",
-                "text": "In 1421, at the Battle of Kutná Hora, Žižka executed the first documented tactical breakthrough of a cavalry encirclement using mobile wagon fort artillery.",
-                "pov": ["hussite_commander", "all"],
-                "metadata": {
-                    "locations": ["Kutná Hora"],
-                    "tactics": ["wagon fort", "artillery"],
-                    "dates": ["1421"]
-                }
-            }
-        ]
-        with open(os.path.join(hussite_dir, "db_metadata.json"), "w", encoding="utf-8") as f:
-            json.dump(hussite_data, f, indent=2)
 
 init_rag_schemes()
 
@@ -311,26 +262,20 @@ def get_embedding(text: str, is_query: bool = True) -> List[float]:
     else:
         formatted_text = text
 
-    if api_key:
-        try:
-            from openai import OpenAI
-            client = OpenAI(api_key=api_key, base_url=base_url)
-            logger.info(f"[RAG] Using embedding model: {model_name} (is_e5={is_e5}, is_query={is_query})")
-            res = client.embeddings.create(input=[formatted_text], model=model_name)
-            return res.data[0].embedding
-        except Exception as e:
-            logger.error(f"Failed to generate embedding: {e}")
+    if not api_key:
+        msg = "No embedding provider configured: OPENAI_API_KEY is missing and Ollama embedding is not active."
+        PipelineLogger.error(msg)
+        raise RAGServiceError(msg)
 
-    # Fallback simulation
-    words = formatted_text.lower().split()
-    vec = np.zeros(1536, dtype=np.float32)
-    for i, w in enumerate(words):
-        h = hash(w) % 1536
-        vec[h] += 1.0
-    norm = np.linalg.norm(vec)
-    if norm > 0:
-        vec = vec / norm
-    return vec.tolist()
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key, base_url=base_url)
+        logger.info(f"[RAG] Using embedding model: {model_name} (is_e5={is_e5}, is_query={is_query})")
+        res = client.embeddings.create(input=[formatted_text], model=model_name)
+        return res.data[0].embedding
+    except Exception as e:
+        PipelineLogger.error("Failed to generate embedding", e)
+        raise RAGServiceError(f"Failed to generate embedding: {e}") from e
 
 class RAGIndex:
     def __init__(self, scheme_id: str):
@@ -340,23 +285,32 @@ class RAGIndex:
         self.bm25 = None
         self.faiss_index = None
         self.last_loaded_time = 0.0
+        self.error: Optional[str] = None
         self.load_index()
 
     def load_index(self):
+        self.error = None
+        self.chunks = []
+        self.bm25 = None
+        self.faiss_index = None
         available_schemes = get_available_rag_schemes()
         if not os.path.exists(self.scheme_dir):
-            PipelineLogger.rag(
-                f"Scheme directory '{self.scheme_id}' not found in {RAG_SCHEMES_DIR}. "
+            msg = (
+                f"RAG scheme '{self.scheme_id}' does not exist in {RAG_SCHEMES_DIR}. "
                 f"Available schemes: {available_schemes}"
             )
+            PipelineLogger.error(msg)
+            self.error = msg
             return
 
         metadata_path = os.path.join(self.scheme_dir, "db_metadata.json")
         if not os.path.exists(metadata_path):
-            PipelineLogger.rag(
-                f"Metadata file not found at: {metadata_path}. "
+            msg = (
+                f"RAG metadata file not found at: {metadata_path}. "
                 f"Available schemes in {RAG_SCHEMES_DIR}: {available_schemes}"
             )
+            PipelineLogger.error(msg)
+            self.error = msg
             return
         try:
             self.last_loaded_time = os.path.getmtime(metadata_path)
@@ -369,17 +323,24 @@ class RAGIndex:
             self.chunks = normalized_chunks
             PipelineLogger.rag(f"Successfully loaded and normalized {len(self.chunks)} chunks for scheme '{self.scheme_id}'.")
         except Exception as e:
-            PipelineLogger.error(f"Failed to load RAG metadata for {self.scheme_id}", e)
+            msg = f"Failed to load RAG metadata for '{self.scheme_id}': {e}"
+            PipelineLogger.error(msg, e)
+            self.error = msg
             return
         if not self.chunks:
-            PipelineLogger.rag(f"No chunks found in metadata for scheme '{self.scheme_id}'.")
+            msg = f"No chunks found in metadata for RAG scheme '{self.scheme_id}'."
+            PipelineLogger.error(msg)
+            self.error = msg
             return
         try:
             tokenized_corpus = [chunk["text"].lower().split() for chunk in self.chunks]
             self.bm25 = BM25Okapi(tokenized_corpus)
             PipelineLogger.rag(f"BM25 initialized successfully for scheme '{self.scheme_id}'.")
         except Exception as e:
-            PipelineLogger.error("Failed to initialize BM25", e)
+            msg = f"Failed to initialize BM25 for '{self.scheme_id}': {e}"
+            PipelineLogger.error(msg, e)
+            self.error = msg
+            return
         try:
             import faiss
             db_faiss_path = os.path.join(self.scheme_dir, "db.faiss")
@@ -416,7 +377,9 @@ class RAGIndex:
                     except Exception as save_err:
                         PipelineLogger.error("Failed to save generated FAISS index to disk", save_err)
         except Exception as e:
-            PipelineLogger.error("Failed to initialize FAISS index", e)
+            msg = f"Failed to initialize FAISS index for '{self.scheme_id}': {e}"
+            PipelineLogger.error(msg, e)
+            self.error = msg
 
     def check_and_reload(self):
         metadata_path = os.path.join(self.scheme_dir, "db_metadata.json")
@@ -440,19 +403,22 @@ def retrieve_hybrid(
     metadata_filters: Optional[Dict[str, Any]] = None
 ) -> List[Dict[str, Any]]:
     global _index_cache
+    if not scheme_id:
+        raise RAGServiceError("No RAG scheme is configured.")
     available_schemes = get_available_rag_schemes()
     PipelineLogger.rag(f"Available schemes in {RAG_SCHEMES_DIR}: {available_schemes}")
     PipelineLogger.rag(f"Initiating hybrid retrieval. Query: '{query}', Scheme: '{scheme_id}', POV Filter: '{pov_filter}', Top K: {top_k}")
-    if scheme_id not in _index_cache:
-        PipelineLogger.rag(f"Scheme '{scheme_id}' not found in cache. Initializing...")
+    if scheme_id not in _index_cache or _index_cache[scheme_id].error is not None:
+        PipelineLogger.rag(f"Scheme '{scheme_id}' not found in cache or previously failed. Initializing...")
         _index_cache[scheme_id] = RAGIndex(scheme_id)
     else:
         _index_cache[scheme_id].check_and_reload()
 
     index = _index_cache[scheme_id]
+    if index.error:
+        raise RAGServiceError(index.error)
     if not index.chunks:
-        PipelineLogger.rag(f"No chunks loaded for scheme '{scheme_id}'. Returning empty results.")
-        return []
+        raise RAGServiceError(f"No chunks loaded for RAG scheme '{scheme_id}'.")
 
     normalized_filters = normalize_metadata_filters(metadata_filters)
     if normalized_filters:
@@ -474,77 +440,81 @@ def retrieve_hybrid(
     allowed_chunks = [c for _, c in allowed_pairs]
 
     faiss_hits = []
-    if index.faiss_index:
-        try:
-            q_emb = get_embedding(query, is_query=True)
-            q_emb_arr = np.array([q_emb], dtype=np.float32)
-            if q_emb_arr.shape[1] != index.faiss_index.d:
-                PipelineLogger.rag(
-                    f"Dimension mismatch: Query vector has {q_emb_arr.shape[1]} dims, "
-                    f"but FAISS index expects {index.faiss_index.d} dims. Skipping FAISS search."
-                )
-            else:
-                q_norm = np.linalg.norm(q_emb_arr)
-                if q_norm > 0:
-                    q_emb_arr = q_emb_arr / q_norm
+    if not index.faiss_index:
+        raise RAGServiceError(f"FAISS index not initialized for RAG scheme '{scheme_id}'.")
 
-                if normalized_filters:
-                    import faiss
-                    try:
-                        ids_arr = np.ascontiguousarray(allowed_indices, dtype=np.int64)
-                        sel = faiss.IDSelectorBatch(len(ids_arr), faiss.swig_ptr(ids_arr))
-                        params = faiss.SearchParameters(sel=sel)
-                        scores, indices = index.faiss_index.search(q_emb_arr, len(allowed_indices), params=params)
-                        for score, idx in zip(scores[0], indices[0]):
-                            if idx != -1 and idx < len(index.chunks):
-                                faiss_hits.append(index.chunks[idx])
-                    except Exception:
-                        reconstructed = np.vstack([index.faiss_index.reconstruct(int(i)) for i in allowed_indices]).astype(np.float32)
-                        if getattr(index.faiss_index, "metric_type", faiss.METRIC_INNER_PRODUCT) == faiss.METRIC_L2:
-                            sub_index = faiss.IndexFlatL2(index.faiss_index.d)
-                        else:
-                            sub_index = faiss.IndexFlatIP(index.faiss_index.d)
-                        sub_index.add(reconstructed)
-                        scores, sub_indices = sub_index.search(q_emb_arr, len(allowed_chunks))
-                        for score, sub_idx in zip(scores[0], sub_indices[0]):
-                            if sub_idx != -1 and sub_idx < len(allowed_chunks):
-                                faiss_hits.append(allowed_chunks[sub_idx])
+    try:
+        q_emb = get_embedding(query, is_query=True)
+        q_emb_arr = np.array([q_emb], dtype=np.float32)
+        if q_emb_arr.shape[1] != index.faiss_index.d:
+            raise RAGServiceError(
+                f"Dimension mismatch: Query vector has {q_emb_arr.shape[1]} dims, "
+                f"but FAISS index expects {index.faiss_index.d} dims."
+            )
+
+        q_norm = np.linalg.norm(q_emb_arr)
+        if q_norm > 0:
+            q_emb_arr = q_emb_arr / q_norm
+
+        if normalized_filters:
+            import faiss
+            try:
+                ids_arr = np.ascontiguousarray(allowed_indices, dtype=np.int64)
+                sel = faiss.IDSelectorBatch(len(ids_arr), faiss.swig_ptr(ids_arr))
+                params = faiss.SearchParameters(sel=sel)
+                scores, indices = index.faiss_index.search(q_emb_arr, len(allowed_indices), params=params)
+                for score, idx in zip(scores[0], indices[0]):
+                    if idx != -1 and idx < len(index.chunks):
+                        faiss_hits.append(index.chunks[idx])
+            except Exception:
+                reconstructed = np.vstack([index.faiss_index.reconstruct(int(i)) for i in allowed_indices]).astype(np.float32)
+                if getattr(index.faiss_index, "metric_type", faiss.METRIC_INNER_PRODUCT) == faiss.METRIC_L2:
+                    sub_index = faiss.IndexFlatL2(index.faiss_index.d)
                 else:
-                    scores, indices = index.faiss_index.search(q_emb_arr, len(index.chunks))
-                    PipelineLogger.rag(f"FAISS dense search completed. Best index match index: {indices[0][0]} with score {scores[0][0]}")
-                    for score, idx in zip(scores[0], indices[0]):
-                        if idx != -1 and idx < len(index.chunks):
-                            faiss_hits.append(index.chunks[idx])
-        except Exception as e:
-            PipelineLogger.error(f"FAISS dense retrieval failed: {e}")
-    else:
-        PipelineLogger.rag(f"FAISS index not initialized for scheme '{scheme_id}'. Skipping dense retrieval.")
+                    sub_index = faiss.IndexFlatIP(index.faiss_index.d)
+                sub_index.add(reconstructed)
+                scores, sub_indices = sub_index.search(q_emb_arr, len(allowed_chunks))
+                for score, sub_idx in zip(scores[0], sub_indices[0]):
+                    if sub_idx != -1 and sub_idx < len(allowed_chunks):
+                        faiss_hits.append(allowed_chunks[sub_idx])
+        else:
+            scores, indices = index.faiss_index.search(q_emb_arr, len(index.chunks))
+            PipelineLogger.rag(f"FAISS dense search completed. Best index match index: {indices[0][0]} with score {scores[0][0]}")
+            for score, idx in zip(scores[0], indices[0]):
+                if idx != -1 and idx < len(index.chunks):
+                    faiss_hits.append(index.chunks[idx])
+    except RAGServiceError:
+        raise
+    except Exception as e:
+        PipelineLogger.error(f"FAISS dense retrieval failed: {e}")
+        raise RAGServiceError(f"FAISS dense retrieval failed: {e}") from e
 
     bm25_hits = []
-    if index.bm25:
-        try:
-            filtered_tokens = remove_stop_words(query)
-            if not filtered_tokens:
-                filtered_tokens = query.lower().split()
-            if normalized_filters:
-                chunks_pool = allowed_chunks
-                bm25_engine = BM25Okapi([chunk["text"].lower().split() for chunk in chunks_pool])
-                log_suffix = " on filtered chunks"
-            else:
-                chunks_pool = index.chunks
-                bm25_engine = index.bm25
-                log_suffix = ""
-            scores = bm25_engine.get_scores(filtered_tokens)
-            ranked_indices = np.argsort(scores)[::-1]
-            PipelineLogger.rag(f"BM25 sparse search completed{log_suffix}. Tokenized query: {filtered_tokens}")
-            for idx in ranked_indices:
-                if scores[idx] > 0 and idx < len(chunks_pool):
-                    bm25_hits.append(chunks_pool[idx])
-            PipelineLogger.rag(f"BM25 found {len(bm25_hits)} matching sparse chunks.")
-        except Exception as e:
-            PipelineLogger.error(f"BM25 sparse retrieval failed: {e}")
-    else:
-        PipelineLogger.rag(f"BM25 index not initialized for scheme '{scheme_id}'. Skipping sparse retrieval.")
+    if not index.bm25:
+        raise RAGServiceError(f"BM25 index not initialized for RAG scheme '{scheme_id}'.")
+
+    try:
+        filtered_tokens = remove_stop_words(query)
+        if not filtered_tokens:
+            filtered_tokens = query.lower().split()
+        if normalized_filters:
+            chunks_pool = allowed_chunks
+            bm25_engine = BM25Okapi([chunk["text"].lower().split() for chunk in chunks_pool])
+            log_suffix = " on filtered chunks"
+        else:
+            chunks_pool = index.chunks
+            bm25_engine = index.bm25
+            log_suffix = ""
+        scores = bm25_engine.get_scores(filtered_tokens)
+        ranked_indices = np.argsort(scores)[::-1]
+        PipelineLogger.rag(f"BM25 sparse search completed{log_suffix}. Tokenized query: {filtered_tokens}")
+        for idx in ranked_indices:
+            if scores[idx] > 0 and idx < len(chunks_pool):
+                bm25_hits.append(chunks_pool[idx])
+        PipelineLogger.rag(f"BM25 found {len(bm25_hits)} matching sparse chunks.")
+    except Exception as e:
+        PipelineLogger.error(f"BM25 sparse retrieval failed: {e}")
+        raise RAGServiceError(f"BM25 sparse retrieval failed: {e}") from e
 
     candidate_hits = []
     seen_ids = set()
@@ -659,10 +629,14 @@ def rewrite_query(user_message: str, history: List[Dict[str, str]], current_goal
         rewritten = api_request([{"role": "user", "content": prompt}], stream=False)
         if rewritten and isinstance(rewritten, str):
             cleaned = rewritten.strip().strip('"').strip("'")
-            PipelineLogger.rag(f"Combined RAG search query: '{cleaned}'")
-            return cleaned
+            if cleaned:
+                PipelineLogger.rag(f"Combined RAG search query: '{cleaned}'")
+                return cleaned
+        raise RAGServiceError("RAG query rewriting returned an empty query.")
+    except LLMServiceError:
+        raise
+    except RAGServiceError:
+        raise
     except Exception as e:
         logger.error(f"Query rewriting failed: {e}")
-    if current_goal:
-        return f"{user_message} {current_goal}".strip()
-    return user_message
+        raise RAGServiceError(f"RAG query rewriting failed: {e}") from e

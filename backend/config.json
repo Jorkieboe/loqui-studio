@@ -2,6 +2,7 @@
   "api_port": 5000,
   "api_host": "0.0.0.0",
   "idle_timeout_seconds": 300,
+  "dev_mode": false,
   "llm_presets": {
     "default": {
       "model": "gpt-6-luna",

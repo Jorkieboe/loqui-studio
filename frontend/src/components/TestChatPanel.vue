@@ -97,7 +97,7 @@ async function send() {
     const data = await res.json()
 
     if (!res.ok) {
-      messages.value = [...messages.value, { role: 'assistant', text: `Error: ${data.detail || 'Unknown error'}`, error: true }]
+      messages.value = [...messages.value, { role: 'assistant', text: data.detail || 'Unknown error', error: true }]
     } else {
       const debugPayload = data.debug || {
         character: data.character,
@@ -117,8 +117,15 @@ async function send() {
         user_payload: data.user_payload || '',
       }
 
+      const warningMessages = (data.warnings || []).map(w => ({
+        role: 'assistant',
+        text: w,
+        error: true,
+      }))
+
       messages.value = [
         ...messages.value,
+        ...warningMessages,
         {
           role: 'assistant',
           text: data.text,

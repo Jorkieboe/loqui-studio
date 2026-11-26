@@ -1,5 +1,5 @@
 import logging
-from scripts.services.llm_service import api_request
+from scripts.services.llm_service import api_request, LLMServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -139,9 +139,11 @@ def evaluate_prompt_transition(node: dict, user_input: str, var_prompt: list, ba
             if matched:
                 return matched
             return choices[0][0]
+        except LLMServiceError:
+            raise
         except Exception as e:
             logger.error(f"Error classifying next node: {e}")
-            return choices[0][0]
+            raise LLMServiceError(f"Failed to classify next dialogue node: {e}") from e
 
     return None
 

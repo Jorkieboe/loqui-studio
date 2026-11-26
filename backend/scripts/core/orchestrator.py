@@ -2,8 +2,9 @@ from typing import Dict, Any, List, Optional
 from scripts.core.chatsession import traverse_fsm, extract_target, find_node_by_id
 from scripts.core.session_manager import ChatSession
 from scripts.core.intent_dispatcher import evaluate_intent, build_intent_tools
-from scripts.services.rag_service import retrieve_hybrid, extract_metadata_categories, rewrite_query
+from scripts.services.rag_service import retrieve_hybrid, extract_metadata_categories, rewrite_query, RAGServiceError
 from scripts.services.llm_service import api_request
+from scripts.utils.config import format_error_for_client
 from scripts.utils.helpers import is_empty_pov, extract_chunk_id_and_text, iter_history_turns
 from scripts.utils.logger import PipelineLogger
 
@@ -203,6 +204,7 @@ def run_dialogue_pipeline(
     retrieved_chunks = []
     metadata_categories = {}
     rag_context_text = ""
+    rag_errors: List[str] = []
 
     rag_settings = info.get("rag", {})
     rag_scheme = rag_settings.get("ragScheme")
@@ -236,32 +238,59 @@ def run_dialogue_pipeline(
 
     PipelineLogger.llm_status(f"Pipeline Active Node: {executed_node_id}, ext_info: {ext_info}, rag_scheme: {rag_scheme}")
 
-    if rag_scheme and ext_info in ["reuse", "resume", "resum"]:
-        retrieved_chunks = getattr(session_instance, "last_retrieved_chunks", []) or []
-        if retrieved_chunks:
-            PipelineLogger.rag(f"Reusing {len(retrieved_chunks)} cached RAG chunks for node '{executed_node_id}'")
+    if ext_info in ["reuse", "resume", "resum"]:
+        if not rag_scheme:
+            msg = format_error_for_client(
+                f"RAG retrieval requested on node '{executed_node_id}', but no RAG scheme is configured.",
+                "Something went wrong with the knowledge base (RAG), so retrieval was skipped. Please contact the developer."
+            )
+            PipelineLogger.error("RAG scheme missing on reuse node; skipping retrieval")
+            rag_errors.append(msg)
         else:
-            PipelineLogger.rag(f"No cached chunks to reuse for node '{executed_node_id}'. Fetching fresh chunks...")
-            ext_info = "fetch"
+            retrieved_chunks = getattr(session_instance, "last_retrieved_chunks", []) or []
+            if retrieved_chunks:
+                PipelineLogger.rag(f"Reusing {len(retrieved_chunks)} cached RAG chunks for node '{executed_node_id}'")
+            else:
+                PipelineLogger.rag(f"No cached chunks to reuse for node '{executed_node_id}'. Fetching fresh chunks...")
+                ext_info = "fetch"
 
-    if rag_scheme and ext_info == "fetch":
-        PipelineLogger.rag("Executing Retrieval-Augmented Generation (RAG)")
-        node_goal = active_node_config.get("goal", "") if active_node_config else ""
-        search_query = rewrite_query(user_input, history, current_goal=node_goal)
-        PipelineLogger.rag(f"Combined RAG search query: '{search_query}'")
+    if ext_info == "fetch":
+        if not rag_scheme:
+            msg = format_error_for_client(
+                f"RAG retrieval requested on node '{executed_node_id}', but no RAG scheme is configured.",
+                "Something went wrong with the knowledge base (RAG), so retrieval was skipped. Please contact the developer."
+            )
+            PipelineLogger.error("RAG scheme missing on fetch node; skipping retrieval")
+            rag_errors.append(msg)
+        else:
+            PipelineLogger.rag("Executing Retrieval-Augmented Generation (RAG)")
+            try:
+                node_goal = active_node_config.get("goal", "") if active_node_config else ""
+                search_query = rewrite_query(user_input, history, current_goal=node_goal)
+                PipelineLogger.rag(f"Combined RAG search query: '{search_query}'")
 
-        pov = rag_settings.get("pov")
-        if is_empty_pov(pov):
-            pov = "None"
-        chunksize = rag_settings.get("chunksize", 4)
-        retrieved_chunks = retrieve_hybrid(
-            search_query,
-            rag_scheme,
-            pov,
-            chunksize,
-            metadata_filters=metadata_filters,
-        )
-        session_instance.last_retrieved_chunks = retrieved_chunks
+                pov = rag_settings.get("pov")
+                if is_empty_pov(pov):
+                    pov = "None"
+                chunksize = rag_settings.get("chunksize", 4)
+                retrieved_chunks = retrieve_hybrid(
+                    search_query,
+                    rag_scheme,
+                    pov,
+                    chunksize,
+                    metadata_filters=metadata_filters,
+                )
+                session_instance.last_retrieved_chunks = retrieved_chunks
+            except RAGServiceError as rag_err:
+                PipelineLogger.error("RAG retrieval failed; skipping retrieval", rag_err)
+                retrieved_chunks = []
+                session_instance.last_retrieved_chunks = []
+                rag_errors.append(
+                    format_error_for_client(
+                        f"RAG error: {rag_err}",
+                        "Something went wrong with the knowledge base (RAG), so retrieval was skipped. Please contact the developer."
+                    )
+                )
 
     if retrieved_chunks:
         rag_context_text = "Retrieved Chunks:\n"
@@ -312,13 +341,13 @@ def run_dialogue_pipeline(
         )
 
     user_payload = f"""{rag_section}Instructions:
-- Address the user's message while strictly executing your CURRENT GOAL.
-- Avoid repeating yourself, and do not repeat facts, phrases, or sentence structures you have already used.
-- Speak naturally from your character's persona and time period. If something is beyond your realistic knowledge, express natural ignorance or deflect in character.
-- Natural conversation flow: Do NOT end every turn with a question. Only ask a question if your current goal strictly requires it. Statements, casual reactions, or friendly sign-offs are preferred.
-- Do NOT use robotic chatbot filler or customer-service praise (e.g. 'Zeker weten!', 'Goede keuze!', 'Ah, dat klinkt goed!', 'Lekker, toch?'). Respond authentically as a human.
+    - Address the user's message while strictly executing your CURRENT GOAL.
+    - Avoid repeating yourself, and do not repeat facts, phrases, or sentence structures you have already used.
+    - Speak naturally from your character's persona and time period. If something is beyond your realistic knowledge, express natural ignorance or deflect in character.
+    - Natural conversation flow: Do NOT end every turn with a question. Only ask a question if your current goal strictly requires it. Statements, casual reactions, or friendly sign-offs are preferred.
+    - Do NOT use robotic chatbot filler or customer-service praise (e.g. 'Zeker weten!', 'Goede keuze!', 'Ah, dat klinkt goed!', 'Lekker, toch?'). Respond authentically as a human.
 
-User message: {user_input}"""
+    User message: {user_input}"""
 
     api_messages.append({"role": "user", "content": user_payload})
 
@@ -347,6 +376,7 @@ User message: {user_input}"""
         "rag_ext_info": ext_info,
         "rag_filters": metadata_filters,
         "rag_search_query": search_query,
+        "rag_errors": rag_errors,
         "system_prompt": system_prompt,
         "user_payload": user_payload
     }

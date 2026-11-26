@@ -179,8 +179,16 @@ function connectSocket() {
     }
   })
 
+  socket.on('warning', (warn) => {
+    if (warn?.detail) {
+      messages.value.push({ role: 'system', text: warn.detail, isError: true })
+      scrollToBottom()
+    }
+  })
+
   socket.on('error', (err) => {
-    messages.value.push({ role: 'system', text: `Error: ${err.detail || 'Unknown'}` })
+    streamingText.value = ''
+    messages.value.push({ role: 'system', text: err.detail || 'An error occurred.', isError: true })
     isWaiting.value = false
     scrollToBottom()
   })
@@ -412,7 +420,7 @@ onBeforeUnmount(() => {
 
               <!-- SYSTEM message — CENTER -->
               <div v-else class="message-row system">
-                <div class="bubble system-bubble">{{ msg.text }}</div>
+                <div class="bubble system-bubble" :class="{ 'error-bubble': msg.isError }">{{ msg.text }}</div>
               </div>
             </template>
 
@@ -754,6 +762,12 @@ onBeforeUnmount(() => {
   border-radius: 20px;
   max-width: none;
   box-shadow: none;
+}
+
+.system-bubble.error-bubble {
+  background: #ffe4e4;
+  color: #c0392b;
+  border: 1px solid #f5c6c6;
 }
 
 .streaming { font-style: italic; opacity: 0.85; }
