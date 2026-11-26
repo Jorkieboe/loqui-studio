@@ -471,6 +471,7 @@ document.addEventListener("keydown", function (e) {
 
       <div v-if="saveError" class="save-error">{{ saveError }}</div>
 
+      <div class="editor-body" :class="{ 'graph-mode': activeTab === 'graph' }">
       <!-- BASE PROMPT TAB -->
       <div v-if="activeTab === 'base'" class="tab-content base-tab">
         <div class="form-col scrollable">
@@ -565,11 +566,6 @@ document.addEventListener("keydown", function (e) {
             </div>
           </section>
           </div>
-        </div>
-
-        <div class="chat-col">
-          <ValidationBlock v-show="!isValid" :errors="validationErrors" />
-          <TestChatPanel v-show="isValid" :draft-config="draftConfig" v-model:messages="chatMessages" v-model:session-state="chatSessionState" />
         </div>
       </div>
 
@@ -737,11 +733,12 @@ document.addEventListener("keydown", function (e) {
             @updatePositions="onUpdatePositions"
           />
         </div>
+      </div>
 
-        <div class="chat-col">
-          <ValidationBlock v-if="!isValid" :errors="validationErrors" />
-          <TestChatPanel v-else :draft-config="draftConfig" v-model:messages="chatMessages" v-model:session-state="chatSessionState" />
-        </div>
+      <div class="chat-col">
+        <ValidationBlock v-show="!isValid" :errors="validationErrors" />
+        <TestChatPanel v-show="isValid" :draft-config="draftConfig" v-model:messages="chatMessages" v-model:session-state="chatSessionState" />
+      </div>
       </div>
     </div>
   </div>
@@ -816,21 +813,23 @@ document.addEventListener("keydown", function (e) {
   border-bottom: 1px solid #f5c6c6;
 }
 
+.editor-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .tab-content {
   display: flex;
   flex: 1;
+  min-width: 0;
   overflow: hidden;
 }
 
 .base-tab .form-col {
   flex: 1;
   min-width: 0;
-}
-
-.base-tab .chat-col {
-  width: 320px;
-  border-left: 1px solid var(--border);
-  flex-shrink: 0;
 }
 
 .graph-tab .node-editor-col {
@@ -845,11 +844,15 @@ document.addEventListener("keydown", function (e) {
   position: relative;
 }
 
-.graph-tab .chat-col {
-  width: 280px;
+.chat-col {
+  width: 320px;
   border-left: 1px solid var(--border);
   flex-shrink: 0;
   position: relative;
+}
+
+.editor-body.graph-mode .chat-col {
+  width: 280px;
 }
 
 .scrollable {
